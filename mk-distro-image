@@ -1,0 +1,100 @@
+#!/bin/bash
+
+MY_NAME=$(basename $0)
+MY_DIR=$(dirname $0)
+
+ARCH=arm64
+DISTRO=debian:12
+BUILD_DIR=debian-12-arm64
+
+do_apt1() {
+    # we are in a subshell so this wont out live this function
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt update
+    apt install -y initramfs-tools
+
+    # don't let the host system effect the initramfs resume var
+    echo "RESUME=none" >/etc/initramfs-tools/conf.d/resume
+
+    apt install -y \
+        linux-image-$ARCH \
+        grub-efi \
+        systemd systemd-sysv udev \
+        iproute2 iputils-ping net-tools ifupdown isc-dhcp-client \
+        fdisk pciutils \
+        sudo procps nano \
+        manpages man bash-completion less wget readline-common
+
+    apt install -y --no-install-recommends xen-system-$ARCH
+
+    # now remove the hack
+    rm /etc/initramfs-tools/conf.d/resume
+}
+
+do_apt2() {
+    # we are in a subshell so this wont out live this function
+    export DEBIAN_FRONTEND=noninteractive
+
+    apt install -y mtools e2fsprogs fakeroot fdisk git
+}
+
+setup_users() {
+    passwd -d root
+}
+
+do_in_container() {
+    (do_apt1)
+    setup_users
+
+    mkdir -p /build/$BUILD_DIR
+    echo "make rootfs.tar.gz"
+    tar --one-file-system -czf /build/$BUILD_DIR/rootfs.tar.gz \
+        --exclude /build --exclude .dockerenv /
+    cp -a /boot /build/$BUILD_DIR/
+
+    mkdir -p /tmp/$BUILD_DIR/
+    cd /tmp/$BUILD_DIR
+    tar -C /tmp/$BUILD_DIR/ -xzf /build/$BUILD_DIR/rootfs.tar.gz
+    SIZE_MB=$(du -s -BM /tmp/$BUILD_DIR | awk '{ print substr($1,1,length($1)-1) }')
+    echo "Disk size $SIZE_MB"
+}
+
+# docker should have a pull --as option but it does not
+# leaving foreign container images in normal name space causes issues
+foreign_pull() {
+    OLD_ID=$(docker image list --format json $DISTRO | jq -r '.ID')
+    docker pull --platform $ARCH $DISTRO
+    NEW_ID=$(docker image list --format json $DISTRO | jq -r '.ID')
+    docker tag $NEW_ID $ARCH/$DISTRO
+    if [ x"$OLD_ID" == x"" ]; then
+        docker rmi $DISTRO
+    else
+        docker tag $OLD_ID $DISTRO
+    fi
+}
+
+do_on_host() {
+    if ! docker images >/dev/null; then
+        error "docker is not installed our you do not have access!"
+    fi
+
+    if [ -d $BUILD_DIR ]; then
+        mkdir -p old
+        mv $BUILD_DIR old/${BUILD_DIR}_$(date +%Y-%m-%d-%H-%M-%S)
+    fi
+
+    foreign_pull
+
+    docker run -it --rm --platform $ARCH -v$MY_DIR:/build $ARCH/$DISTRO /build/$MY_NAME in_container
+}
+
+case $1 in
+in_container)
+    shift
+    do_in_container "$@"
+    ;;
+*)
+    do_on_host "$@"
+    ;;
+esac

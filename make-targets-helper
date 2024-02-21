@@ -1,0 +1,18 @@
+# this file is used by make-image-targets
+# do not try to run it on its own
+# use: make-image-targets dir
+# where dir is the directory this file is in
+
+# uncomment to keep the working dirs for debug
+#KEEP_DIRS=y
+
+main() {
+    D=generated
+    mkdir -p $D
+    mkdir -p $D/efi
+    echo "This is a blank EFI partition" >$D/efi/README.txt
+
+    new-vfat $D/boot.efi     250M EFI  $D/efi
+    new-ext4 $D/rootfs.ext4 1200M root debian-12-arm64/rootfs.tar.gz
+    new-gpt-image $D/debian-12-arm64.img 1500M $D/boot.efi $D/rootfs.ext4
+}
