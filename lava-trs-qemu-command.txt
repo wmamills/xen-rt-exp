@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# docker level
+docker run \
+    --network=host \
+    --cap-add=NET_ADMIN \
+    --interactive \
+    --tty \
+    --rm \
+    --init \
+    --name=lava-docker-qemu-81626-3.1.1-pj1df7fdl4 \
+    --device=/dev/kvm \
+    --device=/dev/net/tun \
+    --mount=type=bind,source=${PWD},destination=${PWD} \
+    registry.gitlab.com/linaro/blueprints/qemu-swtpm  \
+    /usr/local/bin/qemu-system-aarch64-swtpm \
+    -cpu cortex-a57 \
+    -machine virt,secure=on \
+    -nographic \
+    -net nic,model=virtio,macaddr=DE:AD:BE:EF:36:02 \
+    -net user,hostfwd=tcp:127.0.0.1:22222-:22  \
+    -m 1024 \
+    -monitor none \
+    -drive if=pflash,unit=0,readonly=off,file=${PWD}/trs/qemu-pflash0.bin,format=raw \
+    -drive id=disk1,file=${PWD}/trs/trs-image-trs-qemuarm64.rootfs.wic,if=none,format=raw \
+    -device virtio-blk-device,drive=disk1 \
+    -nographic \
+    -device i6300esb,id=watchdog0 \
+    -m 2048 \
+    -smp 4
+
+# test is for the test overlay drive, we don't have it or need it
+: \
+    -drive format=qcow2,file=/var/lib/lava/dispatcher/tmp/81626/apply-overlay-guest-jijuef1n/lava-guest.qcow2,media=disk,if=virtio,id=lavatest
