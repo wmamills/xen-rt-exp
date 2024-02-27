@@ -15,7 +15,7 @@ tpmkey=$(echo "$(pwd)" "$@" | sha1sum | awk '{print($1)}')
 tpmdir="${TPM_DATA_DIR}/${tpmkey}"
 mkdir -p "${TPM_DATA_DIR}"
 if [ ! -d "${tpmdir}" ]; then
-    mkdir "${tpmdir}"
+    mkdir -p "${tpmdir}"
     swtpm_setup \
         --tpmstate dir://${tpmdir} \
         --tpm2 \
