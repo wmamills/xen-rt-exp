@@ -25,6 +25,7 @@ fi
 swtpm socket \
     --tpmstate dir=${tpmdir} \
     --ctrl type=unixio,path=${tpmdir}/swtpm-sock \
+    --pid file=${tpmdir}/swtpm.pid \
     --log level=0 \
     --tpm2 \
     --terminate \
@@ -43,8 +44,14 @@ case "${realqemu}" in
         ;;
 esac
 
-exec "${realqemu}"  \
+"${realqemu}"  \
     "$@" \
     -chardev socket,id=chrtpm,path=${tpmdir}/swtpm-sock \
     -tpmdev emulator,id=tpm0,chardev=chrtpm \
-    -device $tpmdevice,tpmdev=tpm0
+    -device $tpmdevice,tpmdev=tpm0 || true
+
+# Clean-up
+if [ -r ${tpmdir}/swtpm.pid ]; then
+    kill $(cat ${tpmdir}/swtpm.pid) || true
+fi
+rm -rf ${XDG_DATA_HOME}/qemu-swtpm/${tpmkey} || true
