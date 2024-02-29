@@ -1,0 +1,38 @@
+Notes about QEMU
+
+QEMU memory map for secure mode
+
+Get DTB:
+    qemu-system-aarch64 \
+    -M virt,dumpdtb=virt.dtb,secure=on,virtualization=on \
+    -cpu cortex-a53 -nographic -m 8192M
+
+platform        0000_0000__0000_0000        0C00_0000__1FFF_FFFF    ???
+    Sec flash   0000_0000__0000_0000        0000_0000__03FF_FFFF    64MB
+    r/w flash   0000_0000__0400_0000        0000_0000__07FF_FFFF    64MB
+    IO          0000_0000__0800_0000        0000_0000__3FFF_FFFF    896MB
+      pl011     0000_0000__0900_0000        0000_0000__0900_0FFF    4KB non-secure UART
+      fw-cfg    0000_0000__0902_0000        0000_0000__0902_0017    24  bytes
+      pl031     0000_0000__0901_0000        0000_0000__0901_0FFF    4KB RTC
+      pl061     0000_0000__0903_0000        0000_0000__0903_0FFF    4KB non-secure gpio
+      pl011     0000_0000__0904_0000        0000_0000__0904_0FFF    4KB secure UART
+      pl061     0000_0000__090B_0000        0000_0000__090B_0FFF    4KB secure gpio
+      mmio0     0000_0000__0A00_0000        0000_0000__0A00_01FF    512 bytes
+      mmio1     0000_0000__0A00_0200        0000_0000__0A00_03FF    512 bytes
+      ...
+      mmio31    0000_0000__0A00_3E00        0000_0000__0A00_3FFF    512 bytes
+    Memory      0000_0000__4000_0000        0000_0002__3FFF_FFFF    8GB
+      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
+    PCIe        0000_0040__1000_0000        0000_0040__1FFF_FFFF    512MB
+
+For -m 2048
+    Memory      0000_0000__4000_0000        0000_0002__BFFF_FFFF    2GB
+      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
+
+For -m 3072
+    Memory      0000_0000__4000_0000        0000_0000__FFFF_FFFF    3GB
+      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
+
+For -m 3080M
+    Memory      0000_0000__4000_0000        0000_0001__007F_FFFF    3GB+8M
+      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
