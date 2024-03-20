@@ -18,6 +18,11 @@ QEMU_BASE="-machine type=virt \
            -device virtio-scsi-pci \
            -device scsi-hd,drive=hd \
 
+qemu-via-docker() {
+    docker run -it --rm -v${PWD}:${PWD} \
+        registry.gitlab.com/linaro/blueprints/qemu-swtpm \
+        /usr/local/bin/qemu-system-aarch64-swtpm "$@"
+}
 
 case $1 in
 
@@ -28,6 +33,17 @@ case $1 in
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
         -bios ${MY_DIR}/qemu-firmware/arm64-tfa-optee-uboot.bin
     ;;
+
+"trs")
+    qemu-via-docker $QEMU_BASE \
+        -machine type=virt,virtualization=on,secure=on \
+        -drive id=disk1,file=${MY_DIR}/trs/trs-image-trs-qemuarm64.rootfs.wic,if=none,format=raw \
+        -device virtio-blk-device,drive=disk1 \
+        -drive if=pflash,unit=0,readonly=off,file=${MY_DIR}/trs/qemu-pflash0.bin,format=raw \
+        -m 3072 \
+        -device i6300esb,id=watchdog0
+    ;;
+
 "direct"|"linux"|"linux-direct")
     qemu-system-aarch64 $QEMU_BASE \
         -machine type=virt,virtualization=on \
