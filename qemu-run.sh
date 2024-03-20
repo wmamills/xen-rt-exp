@@ -35,11 +35,20 @@ case $1 in
     ;;
 
 "trs")
+    IMAGE_NAME=trs-image-trs-qemuarm64.rootfs
+    FLASH_NAME=flash.bin-qemu
+    echo "Decompressing rootfs image $IMAGE_NAME"
+    rm -rf trs/${IMAGE_NAME}.wic
+    bzip2 -d trs/${IMAGE_NAME}.wic.bz2
+    if [ ! -r trs/$FLASH_NAME.bin ]; then
+        zcat trs/$FLASH_NAME.gz >trs/$FLASH_NAME.bin
+    fi
+    echo "Starting QEMU"
     qemu-via-docker $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on \
         -drive id=disk1,file=${MY_DIR}/trs/trs-image-trs-qemuarm64.rootfs.wic,if=none,format=raw \
         -device virtio-blk-device,drive=disk1 \
-        -drive if=pflash,unit=0,readonly=off,file=${MY_DIR}/trs/qemu-pflash0.bin,format=raw \
+        -drive if=pflash,unit=0,readonly=off,file=${MY_DIR}/trs/$FLASH_NAME.bin,format=raw \
         -m 3072 \
         -device i6300esb,id=watchdog0
     ;;
