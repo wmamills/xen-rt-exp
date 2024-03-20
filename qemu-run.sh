@@ -57,6 +57,7 @@ case $1 in
 "xen-direct"|"xen")
     qemu-system-aarch64 $QEMU_BASE \
         -machine type=virt,virtualization=on \
+        -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
         -kernel ${MY_DIR}/direct-boot/xen.efi \
         -append "dom0_mem=4G,max:4G loglvl=all guest_loglvl=all" \
