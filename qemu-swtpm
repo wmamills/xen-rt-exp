@@ -1,4 +1,6 @@
-#!/bin/sh
+#!/bin/bash
+
+#set -x
 
 set -eu
 realqemu=$(basename "${0}")
@@ -16,8 +18,13 @@ tpmdir="${TPM_DATA_DIR}/${tpmkey}"
 mkdir -p "${TPM_DATA_DIR}"
 if [ ! -d "${tpmdir}" ]; then
     mkdir -p "${tpmdir}"
+
+    if [ ! -r ~/.config/swtpm_setup.conf ]; then
+        /usr/share/swtpm/swtpm-create-user-config-files
+    fi
+
     swtpm_setup \
-        --tpmstate dir://${tpmdir} \
+        --tpmstate ${tpmdir} \
         --tpm2 \
         --pcr-banks sha256
 fi
@@ -51,7 +58,12 @@ esac
     -device $tpmdevice,tpmdev=tpm0 || true
 
 # Clean-up
-if [ -r ${tpmdir}/swtpm.pid ]; then
-    kill $(cat ${tpmdir}/swtpm.pid) || true
-fi
-rm -rf ${XDG_DATA_HOME}/qemu-swtpm/${tpmkey} || true
+for i in $(seq 10); do
+    if [ -r ${tpmdir}/swtpm.pid ]; then
+        kill $(cat ${tpmdir}/swtpm.pid) || true
+        sleep 0.5
+    else
+        rm ${tpmdir}/.lock || true
+        break
+    fi
+done

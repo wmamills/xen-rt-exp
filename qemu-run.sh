@@ -37,14 +37,16 @@ case $1 in
 "trs")
     IMAGE_NAME=trs-image-trs-qemuarm64.rootfs
     FLASH_NAME=flash.bin-qemu
-    echo "Decompressing rootfs image $IMAGE_NAME"
-    rm -rf trs/${IMAGE_NAME}.wic
-    bzip2 -d trs/${IMAGE_NAME}.wic.bz2
+    #rm -rf trs/${IMAGE_NAME}.wic
+    if [ ! -r trs/$IMAGE_NAME.wic ]; then
+        echo "Decompressing rootfs image $IMAGE_NAME"
+        bzip2 -k -d trs/${IMAGE_NAME}.wic.bz2
+    fi
     if [ ! -r trs/$FLASH_NAME.bin ]; then
         zcat trs/$FLASH_NAME.gz >trs/$FLASH_NAME.bin
     fi
     echo "Starting QEMU"
-    qemu-via-docker $QEMU_BASE \
+    ./qemu-system-aarch64-swtpm $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on \
         -drive id=disk1,file=${MY_DIR}/trs/trs-image-trs-qemuarm64.rootfs.wic,if=none,format=raw \
         -device virtio-blk-device,drive=disk1 \
