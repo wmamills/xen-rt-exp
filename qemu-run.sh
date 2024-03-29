@@ -27,14 +27,16 @@ qemu-via-docker() {
 case $1 in
 
 ""|"uefi"|"efi")
+    # can't handle gicv3
     qemu-system-aarch64 $QEMU_BASE \
-        -machine type=virt,virtualization=on,secure=on \
+        -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
         -bios ${MY_DIR}/qemu-firmware/arm64-tfa-optee-uboot.bin
     ;;
 
 "trs")
+    # can't handle gicv3
     IMAGE_NAME=trs-image-trs-qemuarm64.rootfs
     FLASH_NAME=flash.bin-qemu
     #rm -rf trs/${IMAGE_NAME}.wic
@@ -47,7 +49,7 @@ case $1 in
     fi
     echo "Starting QEMU"
     ./qemu-system-aarch64-swtpm $QEMU_BASE \
-        -machine type=virt,virtualization=on,secure=on \
+        -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -drive id=disk1,file=${MY_DIR}/trs/trs-image-trs-qemuarm64.rootfs.wic,if=none,format=raw \
         -device virtio-blk-device,drive=disk1 \
         -drive if=pflash,unit=0,readonly=off,file=${MY_DIR}/trs/$FLASH_NAME.bin,format=raw \
@@ -57,7 +59,7 @@ case $1 in
 
 "direct"|"linux"|"linux-direct")
     qemu-system-aarch64 $QEMU_BASE \
-        -machine type=virt,virtualization=on \
+        -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
         -kernel ${MY_DIR}/direct-boot/Image \
@@ -67,7 +69,7 @@ case $1 in
 
 "xen-direct"|"xen")
     qemu-system-aarch64 $QEMU_BASE \
-        -machine type=virt,virtualization=on \
+        -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
         -kernel ${MY_DIR}/direct-boot/xen.efi \
