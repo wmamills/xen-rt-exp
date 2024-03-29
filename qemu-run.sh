@@ -26,13 +26,21 @@ qemu-via-docker() {
 
 case $1 in
 
-""|"uefi"|"efi")
+""|"u-boot")
     # can't handle gicv3
     qemu-system-aarch64 $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
         -bios ${MY_DIR}/qemu-firmware/arm64-tfa-optee-uboot.bin
+    ;;
+
+"edk2")
+    qemu-system-aarch64 $QEMU_BASE \
+        -machine type=virt,virtualization=on,secure=off,gic_version=3 \
+        -device virtio-blk-device,drive=hd \
+        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
+        -bios /usr/share/qemu-efi-aarch64/QEMU_EFI.fd
     ;;
 
 "trs")
