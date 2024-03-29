@@ -80,8 +80,8 @@ case $1 in
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
-        -kernel ${MY_DIR}/direct-boot/xen.efi \
-        -append "dom0_mem=4G,max:4G loglvl=all guest_loglvl=all" \
+        -kernel ${MY_DIR}/direct-boot/xen \
+        -append "dom0_mem=4G,max:4G dom0_max_vcpus=4 dom0_vcpus_pin=true sched=null vwfi=native loglvl=all guest_loglvl=all" \
         -device guest-loader,\
 addr=0x49000000,kernel=${MY_DIR}/direct-boot/Image,\
 bootargs="console=hvc0 earlyprintk=xen root=/dev/vda2" \
