@@ -17,6 +17,10 @@ TESTS=2
 WAIT=30
 KERNELS=( demo1 )
 
+QEMU_SSH_NAME=qemu
+QEMU_BOOT="./qemu-run.sh xen"
+SESSION_NAME=test-qemu
+
 error() {
     echo "$@"
     exit 2
@@ -54,7 +58,7 @@ record_failure() {
 wait_for_ssh() {
     echo -n "waiting for ssh "
     for i in $(seq 1 $WAIT); do
-        if ssh -o ConnectTimeout=2 qemu-zcu102 true >/dev/null 2>&1; then
+        if ssh -o ConnectTimeout=2 $QEMU_SSH_NAME true >/dev/null 2>&1; then
             echo " OK"
             return
         fi
@@ -69,8 +73,8 @@ wait_for_ssh() {
 do_one_big_test() {
     echo "bigfile transfer"
     dd if=/dev/urandom of=bigfile bs=1M count=32
-    scp bigfile qemu-zcu102:
-    scp qemu-zcu102:bigfile bigfile2
+    scp bigfile $QEMU_SSH_NAME:
+    scp $QEMU_SSH_NAME:bigfile bigfile2
     if cmp bigfile bigfile2; then
         rm bigfile bigfile2
         true
@@ -82,7 +86,7 @@ do_one_big_test() {
 
 do_one_quick_test() {
     echo "ssh command"
-    ssh qemu-zcu102 true
+    ssh $QEMU_SSH_NAME true
 }
 
 do_one_test() {
@@ -145,8 +149,8 @@ do_host() {
 }
 
 do_qemu() {
-    tmux-panel-title "qemu $@"
-    QEMU_TMUX=no qemu-zcu102 $1
+    tmux-panel-title "$QEMU_BOOT $@"
+    QEMU_TMUX=no $QEMU_BOOT "$@"
 }
 
 main() {
@@ -166,20 +170,20 @@ main() {
     export TMPDIR=$MY_TMPDIR/test-qemu-tmp
 
     tmux start-server
-    tmux new-session -d -s QEMU -n qemu-zcu102 -d "$ME subcmd totals"
+    tmux new-session -d -s QEMU -n $QEMU_WIN_NAME -d "$ME subcmd totals"
     SESS="QEMU"
     tmux set -s -t $SESS mouse on
 
-    tmux set -w -t $SESS:qemu-zcu102 pane-border-status top
+    tmux set -w -t $SESS:$QEMU_WIN_NAME pane-border-status top
 
     # the host pane is the driver of it all
     # create it and let it create and destroy the qemu pane
-    tmux split-window -v -l $(( $LINES - 10 )) -t $SESS:qemu-zcu102 "$ME subcmd host"
+    tmux split-window -v -l $(( $LINES - 10 )) -t $SESS:$QEMU_WIN_NAME "$ME subcmd host"
 
     #sleep 1
-    #tmux select-pane -t $SESS:qemu-zcu102.1
+    #tmux select-pane -t $SESS:$QEMU_WIN_NAME.1
 
-    tmux attach -t$SESS:qemu-zcu102
+    tmux attach -t$SESS:$QEMU_WIN_NAME
 
     # if finsihed or killed (but not detached)
     if ! tmux has -t$SESS; then
