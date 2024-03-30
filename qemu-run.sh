@@ -8,7 +8,10 @@ QEMU_BASE="-machine type=virt \
            -accel tcg \
            -device virtio-net-pci,netdev=unet \
            -netdev user,id=unet,hostfwd=tcp::2222-:22 \
-           -serial mon:stdio \
+           -serial stdio \
+           -monitor tcp::2220,server=on,wait=off \
+           -gdb tcp::2221,server=on,wait=off \
+           -pidfile qemu-run.pid \
            -m 8192 \
            -nographic"
 
@@ -26,6 +29,13 @@ qemu-via-docker() {
 }
 
 case $1 in
+
+"kill")
+    if [ -r qemu-run.pid ]; then
+        kill -3 $(cat qemu-run.pid)
+    fi
+    exit 0
+    ;;
 
 ""|"u-boot")
     # can't handle gicv3
@@ -92,9 +102,12 @@ addr=0x50000000,initrd=${MY_DIR}/direct-boot/initrd.img
 
 *)
     echo "unknown option $1"
+    exit 0
     ;;
 
 esac
 
-
-
+if [ $? -gt 100 ]; then
+    reset
+    echo "terminal reset due to error exit"
+fi
