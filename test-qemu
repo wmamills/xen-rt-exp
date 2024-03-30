@@ -1,0 +1,200 @@
+#!/bin/bash
+
+#set -x
+
+ME=$(readlink -f $0)
+
+NOW=$(date +%Y-%m-%d-%H%M%S)
+LOG=test-log-$NOW.log
+
+TMP_MARKER=test-qemu-marker
+
+TOTAL=0
+FAIL=0
+
+RUNS=10
+TESTS=2
+WAIT=30
+KERNELS=( demo1 )
+
+error() {
+	echo "$@"
+	exit 2
+}
+
+tmux-panel-title() {
+    printf '\033]2;%s\033\\' "$1"
+}
+
+update_totals() {
+	echo "TOTAL=$TOTAL FAIL=$FAIL" >totals.txt
+	echo "LAST $LAST_OK" >>totals.txt
+	tac $LOG | grep FAIL | head -n 25 >>totals.txt
+}
+
+record_success() {
+	TOTAL=$(( $TOTAL + 1 ))
+	MSG="OK   $1 $2 $3"
+	echo "$MSG"
+	echo "$MSG" >>$LOG
+	LAST_OK="$MSG"
+	update_totals
+}
+
+record_failure() {
+	TOTAL=$(( $TOTAL + 1 ))
+	FAIL=$(( $FAIL + 1 ))
+	MSG="FAIL $1 $2 $3"
+	echo "$MSG"
+	echo "$MSG" >>$LOG
+	LAST_FAIL="$MSG"
+	update_totals
+}
+
+wait_for_ssh() {
+	echo -n "waiting for ssh "
+	for i in $(seq 1 $WAIT); do
+		if ssh -o ConnectTimeout=2 qemu-zcu102 true >/dev/null 2>&1; then
+			echo " OK"
+			return
+		fi
+		echo -n "."
+		sleep 1
+	done
+	echo
+	echo "Failed to get ssh"
+	false
+}
+
+do_one_big_test() {
+	echo "bigfile transfer"
+	dd if=/dev/urandom of=bigfile bs=1M count=32
+	scp bigfile qemu-zcu102:
+	scp qemu-zcu102:bigfile bigfile2
+	if cmp bigfile bigfile2; then
+		rm bigfile bigfile2
+		true
+	else
+		rm bigfile bigfile2
+		false
+	fi
+}
+
+do_one_quick_test() {
+	echo "ssh command"
+	ssh qemu-zcu102 true
+}
+
+do_one_test() {
+	do_one_quick_test && do_one_big_test
+}
+
+do_totals() {
+	tmux-panel-title "totals"
+	watch -t -n 1 -d cat totals.txt
+}
+
+clean_tmp() {
+	MY_TMPDIR=$(dirname $TMPDIR)
+	if [ -e $MY_TMPDIR/test-qemu-tmp/$TMP_MARKER ]; then
+		echo "cleaning our private tmp dir"
+		rm -rf $MY_TMPDIR/test-qemu-tmp/* || true
+		touch $MY_TMPDIR/test-qemu-tmp/$TMP_MARKER || error "Can't touch tmp marker"
+	else
+		echo "private tmp dir not found"
+	fi
+}
+
+do_host() {
+	tmux-panel-title "host side $@"
+	sleep 2
+	echo "RUNS=$RUNS TESTS=$TESTS KERNELS=${KERNELS[@]}"
+	sleep 2
+
+	#for i in $(seq 1 100); do echo "fake FAIL #$i" >>$LOG; done
+
+	for run in $(seq 1 $RUNS); do
+		for k in ${KERNELS[@]}; do
+			tmux-panel-title "run=$run kernel=$k boot"
+			tmux split-window -h "$ME subcmd qemu $k"
+			if wait_for_ssh 60; then 
+				status=true
+				for test in $(seq 1 $TESTS); do
+					tmux-panel-title "run=$run kernel=$k test=$test"
+					if ! do_one_test; then
+						record_failure $run $k $test
+						status=false
+						break
+					fi
+				done
+				if $status; then
+					record_success $run $k $TESTS
+				fi
+			else
+				record_failure $run $k 0
+			fi
+			tmux kill-pane -t .2
+			echo "sleeping before cleaning"
+			sleep 5
+			clean_tmp
+			echo "sleeping before next run"
+			sleep 10
+		done
+	done			
+	tmux kill-win	
+}
+
+do_qemu() {
+	tmux-panel-title "qemu $@"
+	QEMU_TMUX=no qemu-zcu102 $1
+}
+
+main() {
+echo "Starting..." >totals.txt
+
+if [ -n "$TMUX" ]; then
+	echo "nested tmux not supported"
+	exit 2
+fi
+
+	: ${TMPDIR:=/tmp}
+	export MY_TMPDIR=$(mktemp -d -p $TMPDIR test-qemu-XXXXXXXX)
+	mkdir -p $MY_TMPDIR/test-qemu-tmp || error "Can't create tmp dir"
+	if ! touch $MY_TMPDIR/test-qemu-tmp/$TMP_MARKER; then
+		error "Can't create private tmpdir"
+	fi
+	export TMPDIR=$MY_TMPDIR/test-qemu-tmp
+
+	tmux start-server
+	tmux new-session -d -s QEMU -n qemu-zcu102 -d "$ME subcmd totals"
+	SESS="QEMU"
+	tmux set -s -t $SESS mouse on
+
+tmux set -w -t $SESS:qemu-zcu102 pane-border-status top
+
+# the host pane is the driver of it all
+# create it and let it create and destroy the qemu pane
+tmux split-window -v -l $(( $LINES - 10 )) -t $SESS:qemu-zcu102 "$ME subcmd host"
+
+#sleep 1
+#tmux select-pane -t $SESS:qemu-zcu102.1
+
+	tmux attach -t$SESS:qemu-zcu102
+
+	# if finsihed or killed (but not detached)
+	if ! tmux has -t$SESS; then
+		clean_tmp
+	fi
+}
+
+if [ -e ./test-qemu-vars ]; then
+	. ./test-qemu-vars
+fi
+
+if [ x"$1" = x"subcmd" ]; then
+	CMD=$2
+	shift; shift;
+	do_$CMD "$@"
+else
+	main "$@"
+fi
