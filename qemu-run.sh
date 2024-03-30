@@ -19,7 +19,8 @@ QEMU_BASE="-machine type=virt \
            -device scsi-hd,drive=hd \
 
 qemu-via-docker() {
-    docker run -it --rm -v${PWD}:${PWD} \
+    docker run -it --rm -v${HOME}:${HOME} \
+        -w ${PWD} -u ${UID}:$(id -g) -e HOME=${HOME} \
         registry.gitlab.com/linaro/blueprints/qemu-swtpm \
         /usr/local/bin/qemu-system-aarch64-swtpm "$@"
 }
