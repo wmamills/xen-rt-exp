@@ -3,3 +3,4 @@ old/
 generated/
 for-ref/
 trs/
+qemu-run.pid
