@@ -11,9 +11,6 @@ LOG=test-log-$NOW.log
 
 TMP_MARKER=test-qemu-marker
 
-TOTAL=0
-FAIL=0
-
 RUNS=2
 TRYS=2
 BOOT_WAIT=30
@@ -23,6 +20,8 @@ SSH_FAIL_COUNT=5
 TRY_CONTINUE=true
 #TESTS=( linux-domu )
 TESTS=( dummy )
+
+FILTER_TOTALS=true
 
 QEMU_SSH_NAME=qemu
 QEMU_BOOT="./qemu-run.sh xen"
@@ -37,15 +36,36 @@ tmux-panel-title() {
     printf '\033]2;%s\033\\' "$1"
 }
 
-update_totals() {
-    echo "TOTAL=$TOTAL FAIL=$FAIL" >totals.txt
-    echo "LAST $LAST_OK" >>totals.txt
-    tac $LOG | grep FAIL | head -n 25 >>totals.txt
+format_msg() {
+    MSG1=$(printf "%-8s %4d %-8s %s" $1 $2 $3 $4)
+    shift 4
+    echo "$MSG1 $@"
 }
+
+update_totals() {
+    echo "TOTAL=$TOTAL FAIL=$FAIL" >totals.new
+    echo "LAST $LAST_OK" >>totals.new
+    if $FILTER_TOTALS; then
+        tac $LOG | grep -v "OK " | head -n 25 >>totals.new
+    else
+        echo "LAST $LAST_FAIL" >>totals.new
+        tac $LOG | head -n 25 >>totals.new
+    fi
+    mv -f totals.new totals.txt
+}
+
+init_totals() {
+    LAST_OK=$(printf "%-8s %s" OK none)
+    LAST_FAIL=$(printf "%-8s %s" FAIL none)
+    TOTAL=0
+    FAIL=0
+    update_totals
+}
+
 
 record_success() {
     TOTAL=$(( $TOTAL + 1 ))
-    MSG="OK   $1 $2 $3"
+    MSG=$(format_msg "$@")
     echo "$MSG"
     echo "$MSG" >>$LOG
     LAST_OK="$MSG"
@@ -55,7 +75,7 @@ record_success() {
 record_failure() {
     TOTAL=$(( $TOTAL + 1 ))
     FAIL=$(( $FAIL + 1 ))
-    MSG="FAIL $1 $2 $3"
+    MSG=$(format_msg "$@")
     echo "$MSG"
     echo "$MSG" >>$LOG
     LAST_FAIL="$MSG"
@@ -241,11 +261,8 @@ clean_tmp() {
 
 do_host() {
     tmux-panel-title "host side $@"
-    sleep 2
+    init_totals
     echo "RUNS=$RUNS TRYS=$TRYS TESTS=${TESTS[@]}"
-    sleep 2
-
-    #for i in $(seq 1 100); do echo "fake FAIL #$i" >>$LOG; done
 
     for run in $(seq 1 $RUNS); do
         for t in ${TESTS[@]}; do
@@ -257,7 +274,7 @@ do_host() {
                 for try in $(seq 1 $TRYS); do
                     tmux-panel-title "run=$run test=$t try=$try"
                     if ! do_one_test $t; then
-                        record_failure $run $t $try
+                        record_failure $CAUSE $run $t $try
                         status=false
                         if [ x"$CAUSE" = x"HANG" ]; then
                             # if ssh is not working don't try shutdown
@@ -271,7 +288,7 @@ do_host() {
                             break
                         fi
                     else
-                        record_success $run $t $try
+                        record_success OK $run $t $try
                     fi
                 done
                 if $try_shutdown; then
@@ -280,7 +297,7 @@ do_host() {
                     kill_qemu
                 fi
             else
-                record_failure $run $t 0
+                record_failure NOBOOT $run $t 0
                 kill_qemu
             fi
             echo "sleeping before cleaning"
@@ -299,8 +316,6 @@ do_qemu() {
 }
 
 main() {
-    echo "Starting..." >totals.txt
-
     if [ -n "$TMUX" ]; then
         echo "nested tmux not supported"
         exit 2
@@ -313,6 +328,8 @@ main() {
         error "Can't create private tmpdir"
     fi
     export TMPDIR=$MY_TMPDIR/test-qemu-tmp
+
+    echo "Starting..." >totals.txt
 
     tmux start-server
     tmux new-session -d -s QEMU -n $QEMU_WIN_NAME -d "$ME subcmd totals"
@@ -330,9 +347,10 @@ main() {
 
     tmux attach -t$SESS:$QEMU_WIN_NAME
 
-    # if finsihed or killed (but not detached)
-    if ! tmux has -t$SESS; then
+    # if finished or killed (but not detached)
+    if ! tmux has -t$SESS >/dev/null 2>&1; then
         clean_tmp
+        cat totals.txt
     fi
 }
 
