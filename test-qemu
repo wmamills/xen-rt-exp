@@ -85,9 +85,9 @@ remote_action() {
 }
 
 do_defer_start() {
-    echo "do_defer_start $@"
+    echo "start $@"
     rm -rf test-result.*
-    echo "$ME subcmd $@" | at now + 0 minute  2>&1 | tee test-result.start
+    echo "$ME subcmd $@" | at now + 0 minute  >test-result.start 2>&1
 }
 
 do_defer_test_run() {
