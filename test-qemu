@@ -1,5 +1,25 @@
 #!/bin/bash
 
+# Boot a qemu machine and runs tests on it
+# use tmux to visualize status while running
+# record the results in test logs
+# handle test OK, FAIL, TIMEOUT, and HANG
+# handle boot failures (of target software or qemu itself)
+#
+# For RUNS
+#    For each TESTS
+#       Boot QEMU and wait for ready
+#       For TRYS
+#           run test on target while watching status from host
+#           record status
+#           if ! recoverable failure
+#                break
+#        if ! hung
+#           attempt to shutdown qemu gracefully
+#        else
+#           kill qemu
+#
+
 #set -x
 
 ME=$(readlink -f $0)
@@ -97,18 +117,23 @@ wait_for_ssh() {
 }
 
 ###### Remote test support
+
+# we are on the host, perform a subcmd on the target
 remote_action() {
     scp $ME $QEMU_SSH_NAME:
     ssh $QEMU_SSH_NAME chmod +x ./$MY_NAME
     ssh $QEMU_SSH_NAME ./$MY_NAME subcmd "$@"
 }
 
+# we are on the target, start an detached action
+# (The actual deferral delay is in the action function)
 do_defer_start() {
     echo "start $@"
     rm -rf test-result.*
     echo "$ME subcmd $@" | at now + 0 minute  >test-result.start 2>&1
 }
 
+# we are on the target, this is the action for a deferred test run
 do_defer_test_run() {
     TEST=$1; shift
     set -o pipefail
@@ -126,6 +151,12 @@ do_defer_test_run() {
     echo $? >test-result.done
 }
 
+# we are on the host
+# use ssh to check on the target and see if the deferred test is done
+#
+# returns 0 for test completed with 0 exit status
+# returns !0 for anything else
+# always sets global var CAUSE
 check_ssh() {
     local time=$1
     local timeout=$2
@@ -169,6 +200,15 @@ check_ssh() {
     return 1
 }
 
+# perform a test on the target in a deferred way
+# the test itself will be a separate file
+#
+# we use deferred tests for anything that may cause the target
+# (or the emulator) to hang
+#
+# returns 0 for test completed with 0 exit status
+# returns !0 for anything else
+# always sets global var CAUSE
 do_one_deferred_test() {
     echo "test $1"
     if [ ! -r $1-test.sh ]; then
@@ -309,11 +349,13 @@ do_host() {
     tmux kill-win
 }
 
+# This is the tmux window pane function to actually run qemu
 do_qemu() {
     tmux-panel-title "$QEMU_BOOT $@"
     QEMU_TMUX=no $QEMU_BOOT "$@"
 }
 
+# main starts things up and then waits for tmux to finish or detach
 main() {
     if [ -n "$TMUX" ]; then
         echo "nested tmux not supported"
