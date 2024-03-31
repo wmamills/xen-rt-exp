@@ -15,7 +15,7 @@ TOTAL=0
 FAIL=0
 
 RUNS=2
-NUM_TEST_TRYS=2
+TRYS=2
 BOOT_WAIT=30
 SHUTDOWN_WAIT=30
 TEST_WAIT=60
@@ -224,7 +224,7 @@ clean_tmp() {
 do_host() {
     tmux-panel-title "host side $@"
     sleep 2
-    echo "RUNS=$RUNS TRYS=$NUM_TEST_TRYS TESTS=${TESTS[@]}"
+    echo "RUNS=$RUNS TRYS=$TRYS TESTS=${TESTS[@]}"
     sleep 2
 
     #for i in $(seq 1 100); do echo "fake FAIL #$i" >>$LOG; done
@@ -236,7 +236,7 @@ do_host() {
             if wait_for_ssh 60; then 
                 status=true
                 try_shutdown=true
-                for try in $(seq 1 $NUM_TEST_TRYS); do
+                for try in $(seq 1 $TRYS); do
                     tmux-panel-title "run=$run test=$t try=$try"
                     if ! do_one_test $t; then
                         record_failure $run $t $try
