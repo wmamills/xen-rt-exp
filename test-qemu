@@ -18,7 +18,6 @@ SHUTDOWN_WAIT=30
 TEST_WAIT=60
 SSH_FAIL_COUNT=5
 TRY_CONTINUE=true
-#TESTS=( linux-domu )
 TESTS=( dummy )
 
 FILTER_TOTALS=true
@@ -268,7 +267,7 @@ do_host() {
         for t in ${TESTS[@]}; do
             tmux-panel-title "run=$run test=$t boot"
             tmux split-window -h "$ME subcmd qemu $t"
-            if wait_for_ssh 60; then 
+            if wait_for_ssh $BOOT_WAIT; then
                 status=true
                 try_shutdown=true
                 for try in $(seq 1 $TRYS); do
