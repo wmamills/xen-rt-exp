@@ -1,0 +1,4 @@
+RUNS=10
+NUM_TEST_TRYS=10
+TRY_CONTINUE=true
+TESTS=( linux-domu-x4 )
