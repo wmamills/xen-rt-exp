@@ -403,6 +403,10 @@ if [ x"$1" = x"subcmd" ]; then
     CMD=$2
     shift; shift;
     do_$CMD "$@"
+elif [ x"$1" = x"help" ]; then
+    echo "this runs a sequence of tests using qemu"
+    echo "look at test-qemu-vars for examples"
+    exit 2
 else
     main "$@"
 fi
