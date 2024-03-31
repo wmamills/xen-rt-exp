@@ -114,7 +114,10 @@ check_ssh() {
 
     echo -n "checking ssh (timeout $1 seconds) "
     for i in $(seq 1 $1); do
-        if scp -o ConnectTimeout=2 $QEMU_SSH_NAME:test-result.* . >/dev/null 2>&1; then
+        if scp -o ConnectTimeout=2 \
+            -o ServerAliveInterval=2 \
+            -o ServerAliveCountMax=2 \
+            $QEMU_SSH_NAME:test-result.* . >/dev/null 2>&1; then
             echo -n "."
             FAILS=0
             if [ -r test-result.done ]; then
@@ -201,7 +204,22 @@ do_defer_shutdown() {
 
 do_shutdown() {
     remote_action defer_start defer_shutdown
-    wait_qemu_stop
+    if ! wait_qemu_stop; then
+        kill_qemu
+    fi
+}
+
+kill_qemu() {
+    if [ -r qemu-run.pid ]; then
+        PID=$(cat qemu-run.pid)
+    else
+        return
+    fi
+
+    while qemu_running; do
+            kill -3 $PID
+            sleep 1
+    done
 }
 
 ###### Windows and main
@@ -258,11 +276,13 @@ do_host() {
                 done
                 if $try_shutdown; then
                     do_shutdown
+                else
+                    kill_qemu
                 fi
             else
                 record_failure $run $t 0
+                kill_qemu
             fi
-            tmux kill-pane -t .2
             echo "sleeping before cleaning"
             sleep 1
             clean_tmp
