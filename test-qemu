@@ -3,6 +3,8 @@
 #set -x
 
 ME=$(readlink -f $0)
+MY_NAME=$(basename $ME)
+MY_DIR=$(dirname $ME)
 
 NOW=$(date +%Y-%m-%d-%H%M%S)
 LOG=test-log-$NOW.log
@@ -12,10 +14,15 @@ TMP_MARKER=test-qemu-marker
 TOTAL=0
 FAIL=0
 
-RUNS=10
-TESTS=2
-WAIT=30
-KERNELS=( demo1 )
+RUNS=2
+NUM_TEST_TRYS=2
+BOOT_WAIT=30
+SHUTDOWN_WAIT=30
+TEST_WAIT=60
+SSH_FAIL_COUNT=5
+TRY_CONTINUE=true
+#TESTS=( linux-domu )
+TESTS=( dummy )
 
 QEMU_SSH_NAME=qemu
 QEMU_BOOT="./qemu-run.sh xen"
@@ -57,7 +64,7 @@ record_failure() {
 
 wait_for_ssh() {
     echo -n "waiting for ssh "
-    for i in $(seq 1 $WAIT); do
+    for i in $(seq 1 $BOOT_WAIT); do
         if ssh -o ConnectTimeout=2 $QEMU_SSH_NAME true >/dev/null 2>&1; then
             echo " OK"
             return
@@ -70,18 +77,85 @@ wait_for_ssh() {
     false
 }
 
-do_one_big_test() {
-    echo "bigfile transfer"
-    dd if=/dev/urandom of=bigfile bs=1M count=32
-    scp bigfile $QEMU_SSH_NAME:
-    scp $QEMU_SSH_NAME:bigfile bigfile2
-    if cmp bigfile bigfile2; then
-        rm bigfile bigfile2
-        true
+###### Remote test support
+remote_action() {
+    scp $ME $QEMU_SSH_NAME:
+    ssh $QEMU_SSH_NAME chmod +x ./$MY_NAME
+    ssh $QEMU_SSH_NAME ./$MY_NAME subcmd "$@"
+}
+
+do_defer_start() {
+    echo "do_defer_start $@"
+    rm -rf test-result.*
+    echo "$ME subcmd $@" | at now + 0 minute  2>&1 | tee test-result.start
+}
+
+do_defer_test_run() {
+    TEST=$1; shift
+    set -o pipefail
+
+    exec >/dev/console 2>&1 </dev/null
+    if [ ! -r ${TEST}-test.sh ]; then
+        error "${TEST}-test.sh does not exist!"
     else
-        rm bigfile bigfile2
-        false
+        chmod +x ${TEST}-test.sh
     fi
+    echo "sleeping 2 seconds to allow ssh to exit"
+    sleep 2
+    echo "starting test $TEST"
+    ./${TEST}-test.sh run "$@" | tee test-result.log
+    echo $? >test-result.done
+}
+
+check_ssh() {
+    local time=$1
+    local timeout=$2
+    local fails=0
+
+    echo -n "checking ssh (timeout $1 seconds) "
+    for i in $(seq 1 $1); do
+        if scp -o ConnectTimeout=2 $QEMU_SSH_NAME:test-result.* . >/dev/null 2>&1; then
+            echo -n "."
+            FAILS=0
+            if [ -r test-result.done ]; then
+                # allow the at job to finish and remove itself from the atq
+                sleep 1
+
+                if [ x"$(cat test-result.done)" = x"0" ]; then
+                    CAUSE="OK"
+                    echo " $CAUSE"
+                    return 0
+                else
+                    CAUSE="FAIL"
+                    echo " $CAUSE"
+                    return 1
+                fi
+            fi
+        else
+            echo -n "!"
+            FAILS=$(( $FAILS + 1 ))
+            if [ $FAILS -gt $timeout ]; then
+                CAUSE="HANG"
+                echo " $CAUSE"
+                return 1
+            fi
+        fi
+        sleep 1
+    done
+    CAUSE="TIMEOUT"
+    echo " $CAUSE"
+    return 1
+}
+
+do_one_deferred_test() {
+    echo "test $1"
+    if [ ! -r $1-test.sh ]; then
+        error "$1-test.sh does not exist!"
+    fi
+    rm -rf test-result.*
+    scp $1-test.sh $QEMU_SSH_NAME:
+    remote_action defer_start defer_test_run "$@"
+    check_ssh $TEST_WAIT $SSH_FAIL_COUNT
 }
 
 do_one_quick_test() {
@@ -90,9 +164,47 @@ do_one_quick_test() {
 }
 
 do_one_test() {
-    do_one_quick_test && do_one_big_test
+    do_one_deferred_test $@
 }
 
+###### Shutdown support
+qemu_running() {
+    if [ -r qemu-run.pid ]; then
+        ps --pid $(cat qemu-run.pid) >/dev/null
+    else
+        false
+    fi
+}
+
+wait_qemu_stop() {
+    echo -n "waiting for qemu to stop "
+    for i in $(seq 1 $SHUTDOWN_WAIT); do
+        if ! qemu_running; then
+            echo " OK"
+            return
+        fi
+        echo -n "."
+        sleep 1
+    done
+    echo
+    echo "qemu did not stop"
+    false
+}
+
+do_defer_shutdown() {
+    exec >/dev/console 2>&1 </dev/null
+    echo "sleeping 2 seconds to allow ssh to exit"
+    sleep 2
+    echo "starting shutdown"
+    shutdown now
+}
+
+do_shutdown() {
+    remote_action defer_start defer_shutdown
+    wait_qemu_stop
+}
+
+###### Windows and main
 do_totals() {
     tmux-panel-title "totals"
     watch -t -n 1 -d cat totals.txt
@@ -112,40 +224,53 @@ clean_tmp() {
 do_host() {
     tmux-panel-title "host side $@"
     sleep 2
-    echo "RUNS=$RUNS TESTS=$TESTS KERNELS=${KERNELS[@]}"
+    echo "RUNS=$RUNS TRYS=$NUM_TEST_TRYS TESTS=${TESTS[@]}"
     sleep 2
 
     #for i in $(seq 1 100); do echo "fake FAIL #$i" >>$LOG; done
 
     for run in $(seq 1 $RUNS); do
-        for k in ${KERNELS[@]}; do
-            tmux-panel-title "run=$run kernel=$k boot"
-            tmux split-window -h "$ME subcmd qemu $k"
+        for t in ${TESTS[@]}; do
+            tmux-panel-title "run=$run test=$t boot"
+            tmux split-window -h "$ME subcmd qemu $t"
             if wait_for_ssh 60; then 
                 status=true
-                for test in $(seq 1 $TESTS); do
-                    tmux-panel-title "run=$run kernel=$k test=$test"
-                    if ! do_one_test; then
-                        record_failure $run $k $test
+                try_shutdown=true
+                for try in $(seq 1 $NUM_TEST_TRYS); do
+                    tmux-panel-title "run=$run test=$t try=$try"
+                    if ! do_one_test $t; then
+                        record_failure $run $t $try
                         status=false
-                        break
+                        if [ x"$CAUSE" = x"HANG" ]; then
+                            # if ssh is not working don't try shutdown
+                            try_shutdown=false
+                            break
+                        elif [ x"$CAUSE" = x"TIMEOUT" ]; then
+                            # for timeout we can't go on but we can try shutdown
+                            break
+                        elif ! $TRY_CONTINUE; then
+                            # for fail we can go on if we want to
+                            break
+                        fi
+                    else
+                        record_success $run $t $try
                     fi
                 done
-                if $status; then
-                    record_success $run $k $TESTS
+                if $try_shutdown; then
+                    do_shutdown
                 fi
             else
-                record_failure $run $k 0
+                record_failure $run $t 0
             fi
             tmux kill-pane -t .2
             echo "sleeping before cleaning"
-            sleep 5
+            sleep 1
             clean_tmp
             echo "sleeping before next run"
-            sleep 10
+            sleep 1
         done
-    done            
-    tmux kill-win   
+    done
+    tmux kill-win
 }
 
 do_qemu() {

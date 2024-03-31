@@ -3,4 +3,10 @@ old/
 generated/
 for-ref/
 trs/
+min/
+qemu-firmware/
+zephyr*.bin
 qemu-run.pid
+totals.txt
+test-log-*.log
+test-result.*
