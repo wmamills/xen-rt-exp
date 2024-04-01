@@ -2,6 +2,14 @@
 
 MY_DIR=$PWD
 
+# short cut names for some common things
+G=$MY_DIR/generated
+HD=debian-12-arm64/hd.img
+DB=debian-12-arm64/boot
+DBK=$G/$DB/vmlinuz-6.1.0-18-arm64
+DBI=$G/$DB/initrd.img-6.1.0-18-arm64
+DBX=$G/$DB/xen
+
 QEMU_BASE="-machine type=virt \
            -cpu cortex-a57 \
            -smp 8 \
@@ -39,65 +47,67 @@ case $1 in
 
 ""|"u-boot")
     # can't handle gicv3
+    U_BOOT=qemu-firmware/arm64-tfa-optee-uboot.bin
+    ./maybe-fetch ${U_BOOT}.bz2
+    ./maybe-fetch ${HD}.bz2
     qemu-system-aarch64 $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -device virtio-blk-device,drive=hd \
-        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
-        -bios ${MY_DIR}/qemu-firmware/arm64-tfa-optee-uboot.bin
+        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
+        -bios ${G}/$U_BOOT
     ;;
 
 "edk2")
+    ./maybe-fetch ${HD}.bz2
     qemu-system-aarch64 $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=off,gic_version=3 \
         -device virtio-blk-device,drive=hd \
-        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
+        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
         -bios /usr/share/qemu-efi-aarch64/QEMU_EFI.fd
     ;;
 
 "trs")
-    # can't handle gicv3
-    IMAGE_NAME=trs-image-trs-qemuarm64.rootfs
-    FLASH_NAME=flash.bin-qemu
-    #rm -rf trs/${IMAGE_NAME}.wic
-    if [ ! -r trs/$IMAGE_NAME.wic ]; then
-        echo "Decompressing rootfs image $IMAGE_NAME"
-        bzip2 -k -d trs/${IMAGE_NAME}.wic.bz2
-    fi
-    if [ ! -r trs/$FLASH_NAME.bin ]; then
-        zcat trs/$FLASH_NAME.gz >trs/$FLASH_NAME.bin
-    fi
+    # can't handle gicv3 nor memory > 3072
+    IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
+    FLASH_NAME=trs/flash.bin-qemu
+    ./maybe-fetch ${IMAGE_NAME}.bz2
+    ./maybe-fetch ${FLASH_NAME}.gz
     echo "Starting QEMU"
     ./qemu-system-aarch64-swtpm $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
-        -drive id=disk1,file=${MY_DIR}/trs/trs-image-trs-qemuarm64.rootfs.wic,if=none,format=raw \
+        -drive id=disk1,file=${G}/${IMAGE_NAME},if=none,format=raw \
         -device virtio-blk-device,drive=disk1 \
-        -drive if=pflash,unit=0,readonly=off,file=${MY_DIR}/trs/$FLASH_NAME.bin,format=raw \
+        -drive if=pflash,unit=0,readonly=off,file=${G}/${FLASH_NAME},format=raw \
         -m 3072 \
         -device i6300esb,id=watchdog0
     ;;
 
 "direct"|"linux"|"linux-direct")
+    ./maybe-fetch ${HD}.bz2
+    ./maybe-fetch ${DB}.tar.gz
     qemu-system-aarch64 $QEMU_BASE \
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
-        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
-        -kernel ${MY_DIR}/direct-boot/Image \
-        -initrd ${MY_DIR}/direct-boot/initrd.img \
+        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
+        -kernel ${DBK} \
+        -initrd ${DBI} \
         -append "console=ttyAMA0 root=/dev/vda2"
     ;;
 
 "xen-direct"|"xen")
+    ./maybe-fetch ${HD}.bz2
+    ./maybe-fetch ${DB}.tar.gz
     qemu-system-aarch64 $QEMU_BASE \
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
-        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${MY_DIR}/generated/debian-12-arm64.img \
-        -kernel ${MY_DIR}/direct-boot/xen \
+        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
+        -kernel ${DBX} \
         -append "dom0_mem=4G,max:4G dom0_max_vcpus=4 dom0_vcpus_pin=true sched=null loglvl=all guest_loglvl=all" \
         -device guest-loader,\
-addr=0x49000000,kernel=${MY_DIR}/direct-boot/Image,\
+addr=0x49000000,kernel=${DBK},\
 bootargs="console=hvc0 earlyprintk=xen root=/dev/vda2" \
         -device guest-loader,\
-addr=0x50000000,initrd=${MY_DIR}/direct-boot/initrd.img
+addr=0x50000000,initrd=${DBI}
     ;;
 
 *)

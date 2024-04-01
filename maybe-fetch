@@ -1,0 +1,123 @@
+#!/bin/bash
+
+MY_DIR=$PWD
+
+# short cut names for some common things
+G=$MY_DIR/generated
+I=$MY_DIR/images
+MARKER=debian-12-arm64/boot.tar.gz
+
+check_images_submodule() {
+    # make sure we have git lfs
+    if ! git lfs status >/dev/null; then
+        echo "You need to install git lfs"
+        echo "Something like: sudo apt install git-lfs"
+        exit 2
+    fi
+
+    # see if we already have the images
+    if ! test -r $I/$MARKER; then
+        # no, init the submodule
+        echo "Init the images submodule"
+        git submodule init images
+        echo "Fetch the Images, this may take a while"
+        git submodule update images
+    fi
+}
+
+# see if we have the image file
+check_image() {
+    if ! test -r $I/$1; then
+        # no, maybe we need to fetch the submodule
+        check_images_submodule
+        if ! test -r $I/$1; then
+            # we still don't have it, probably a typo
+            echo "File $I/$1 does not exist"
+            exit 2
+        fi
+    fi
+}
+
+do_one_file() {
+    DIR=$G/$(dirname $1)
+    FILE=$(basename $1)
+
+    case $1 in
+    */asis.*)
+        # copy as is but strip the asis. marker
+        TARGET=$DIR/${FILE#asis.}
+        if ! test -r $TARGET; then
+            check_image $1
+            echo "copy $1"
+            mkdir -p $DIR
+            cp $I/$1 $TARGET
+        fi
+        ;;
+    *.tar.gz)
+        # The target is a directory for this case
+        TARGET=$G/${1%.tar.gz}
+        if ! test -d $TARGET; then
+            check_image $1
+            echo "extract $1"
+            mkdir -p $DIR
+            tar xzf $I/$1 -C $DIR
+        fi
+        ;;
+    *.cpio.gz)
+        # keep compressed, just copy
+        TARGET=$G/$1
+        if ! test -r $TARGET; then
+            check_image $1
+            echo "copy $1"
+            mkdir -p $DIR
+            cp $I/$1 $TARGET
+        fi
+        ;;
+    *.bz2)
+        # decompress
+        TARGET=$G/${1%.bz2}
+        if ! test -r $TARGET; then
+            check_image $1
+            echo "decompress $1"
+            mkdir -p $DIR
+            bzcat $I/$1 >$TARGET
+        fi
+        ;;
+    *.gz)
+        # decompress
+        TARGET=$G/${1%.gz}
+        if ! test -r $TARGET; then
+            check_image $1
+            echo "decompress $1"
+            mkdir -p $DIR
+            zcat $I/$1 >$TARGET
+        fi
+        ;;
+    *)
+        # everything else is just a copy
+        TARGET=$G/$1
+        if ! test -r $TARGET; then
+            check_image $1
+            echo "copy $1"
+            mkdir -p $DIR
+            cp $I/$1 $G/$1
+        fi
+        ;;
+    esac
+}
+
+do_all() {
+    check_images_submodule
+    for f in $(cd images; find * -type f); do
+        do_one_file $f
+    done
+}
+
+case $1 in
+all)
+    do_all
+    ;;
+*)
+    do_one_file $1
+    ;;
+esac
