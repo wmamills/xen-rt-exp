@@ -370,6 +370,7 @@ main() {
     fi
     export TMPDIR=$MY_TMPDIR/test-qemu-tmp
 
+    touch $LOG
     echo "Starting..." >totals.txt
 
     tmux start-server
