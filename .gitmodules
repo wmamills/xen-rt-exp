@@ -1,0 +1,9 @@
+[submodule "xen"]
+	path = xen
+	url = https://xenbits.xen.org/git-http/xen.git
+[submodule "zephyr-apps"]
+	path = zephyr-apps
+	url = https://github.com/wmamills/zephyr-xen-rt.git
+[submodule "images"]
+	path = images
+	url = https://github.com/wmamills/xen-rt-exp-images.git
