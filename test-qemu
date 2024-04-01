@@ -43,7 +43,7 @@ TESTS=( dummy )
 FILTER_TOTALS=true
 
 QEMU_SSH_NAME=qemu
-QEMU_BOOT="./qemu-run.sh xen"
+QEMU_BOOT="./qemu-run xen"
 SESSION_NAME=test-qemu
 
 error() {
