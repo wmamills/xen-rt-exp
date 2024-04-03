@@ -3,10 +3,14 @@
 #set -x
 
 set -eu
-realqemu=$(basename "${0}")
-realqemu=${realqemu%%-swtpm}
-if [ "${realqemu}" = qemu ]; then
-    realqemu="qemu-system-$(uname -m)"
+if [ -n "$QEMU_BIN" ] & false; then
+    realqemu=$QEMU_BIN
+else
+    realqemu=$(basename "${0}")
+    realqemu=${realqemu%%-swtpm}
+    if [ "${realqemu}" = qemu ]; then
+        realqemu="qemu-system-$(uname -m)"
+    fi
 fi
 
 uid=$(id -u)

@@ -5,8 +5,11 @@ MY_DIR=$PWD
 #DEF_KERNEL_VER=6.1.0-18-arm64
 DEF_KERNEL_VER=6.6.20-00001-g5763984e45db
 
+DEF_QEMU_DIR=/opt/qemu-9-wip
+
 # provide defaults if not overridden by ENV vars
 : ${KERNEL_VER:=$DEF_KERNEL_VER}
+: ${QEMU_DIR:=$DEF_QEMU_DIR}
 
 # short cut names for some common things
 G=$MY_DIR/generated
@@ -17,6 +20,12 @@ DBI=$G/$DB/initrd.img-$KERNEL_VER
 DBX=$G/$DB/xen
 
 if [ x"$QEMU_DIR" = x"system" ]; then
+    export QEMU_BIN=qemu-system-aarch64
+else
+    export QEMU_BIN=$QEMU_DIR/bin/qemu-system-aarch64
+    export LD_LIBRARY_PATH=$QEMU_DIR/lib/x86_64-linux-gnu/:$LD_LIBRARY_PATH
+fi
+
 QEMU_BASE="-machine type=virt \
            -cpu cortex-a57 \
            -smp 8 \
@@ -57,7 +66,7 @@ case $1 in
     U_BOOT=qemu-firmware/arm64-tfa-optee-uboot.bin
     ./maybe-fetch ${U_BOOT}.bz2
     ./maybe-fetch ${HD}.bz2
-    qemu-system-aarch64 $QEMU_BASE \
+    $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
@@ -66,8 +75,8 @@ case $1 in
 
 "edk2")
     ./maybe-fetch ${HD}.bz2
-    qemu-system-aarch64 $QEMU_BASE \
-        -machine type=virt,virtualization=on,secure=off,gic_version=3 \
+    $QEMU_BIN $QEMU_BASE \
+        -machine type=virt,virtualization=on,secure=off,gic_version=2 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
         -bios /usr/share/qemu-efi-aarch64/QEMU_EFI.fd
@@ -92,7 +101,7 @@ case $1 in
 "direct"|"linux"|"linux-direct")
     ./maybe-fetch ${HD}.bz2
     ./maybe-fetch ${DB}.tar.gz
-    qemu-system-aarch64 $QEMU_BASE \
+    $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
@@ -104,7 +113,7 @@ case $1 in
 "xen-direct"|"xen")
     ./maybe-fetch ${HD}.bz2
     ./maybe-fetch ${DB}.tar.gz
-    qemu-system-aarch64 $QEMU_BASE \
+    $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
