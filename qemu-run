@@ -21,9 +21,20 @@ DBX=$G/$DB/xen
 
 if [ x"$QEMU_DIR" = x"system" ]; then
     export QEMU_BIN=qemu-system-aarch64
+
+    # Find the firmware
+    # last one found wins so search from least prefered to most prefered
+    for f in AAVMF_CODE.fd QEMU_EFI.fd edk2-aarch64-code.fd; do
+        for d in /usr/share/{AAVMF,qemu,qemu-efi-aarch64}; do
+            if [ -r $d/$f ]; then
+                EDK_FILE=/usr/share/qemu-efi-aarch64/QEMU_EFI.fd
+            fi
+        done
+    done
 else
     export QEMU_BIN=$QEMU_DIR/bin/qemu-system-aarch64
     export LD_LIBRARY_PATH=$QEMU_DIR/lib/x86_64-linux-gnu/:$LD_LIBRARY_PATH
+    EDK_FILE=$QEMU_DIR/share/qemu/edk2-aarch64-code.fd
 fi
 
 QEMU_BASE="-machine type=virt \
@@ -75,11 +86,15 @@ case $1 in
 
 "edk2")
     ./maybe-fetch ${HD}.bz2
+    if [ -z "$EDK_FILE" -o ! -r "$EDK_FILE" ]; then
+        echo "EDK_FILE=$EDK_FILE not found"
+        exit 2
+    fi
     $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=off,gic_version=2 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
-        -bios /usr/share/qemu-efi-aarch64/QEMU_EFI.fd
+        -bios $EDK_FILE
     ;;
 
 "ts")
