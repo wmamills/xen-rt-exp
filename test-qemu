@@ -69,10 +69,10 @@ update_totals() {
     echo "TOTAL=$TOTAL FAIL=$FAIL" >totals.new
     echo "LAST $LAST_OK" >>totals.new
     if $FILTER_TOTALS; then
-        tac $LOG | grep -v "OK " | head -n 25 >>totals.new
+        tac $LOG | grep -v "^OK " | grep -v "^#" | head -n 25 >>totals.new
     else
         echo "LAST $LAST_FAIL" >>totals.new
-        tac $LOG | head -n 25 >>totals.new
+        tac $LOG | grep -v "^#" | head -n 25 >>totals.new
     fi
     mv -f totals.new totals.txt
 }
@@ -310,7 +310,17 @@ clean_tmp() {
 do_host() {
     tmux-panel-title "host side $@"
     init_totals
-    echo "RUNS=$RUNS TRYS=$TRYS TESTS=${TESTS[@]}"
+    echo "# LOG=$LOG"
+    echo "# RUNS=$RUNS TRYS=$TRYS TESTS=${TESTS[@]}" | tee -a $LOG
+    echo "#"                                    >>$LOG
+    echo "# QEMU_DIR=$QEMU_DIR"                 >>$LOG
+    echo "# QEMU_BOOT=$QEMU_BOOT"               >>$LOG
+    echo "# KERNEL_VER=$KERNEL_VER"             >>$LOG
+    echo "#"                                    >>$LOG
+    echo "# BOOT_WAIT=$BOOT_WAIT"               >>$LOG
+    echo "# SHUTDOWN_WAIT=$SHUTDOWN_WAIT"       >>$LOG
+    echo "# TEST_WAIT=$TEST_WAIT"               >>$LOG
+    echo "# TRY_CONTINUE=$TRY_CONTINUE"         >>$LOG
 
     for run in $(seq 1 $RUNS); do
         for t in ${TESTS[@]}; do
