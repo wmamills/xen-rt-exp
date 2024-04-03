@@ -5,7 +5,7 @@ MY_DIR=$PWD
 #DEF_KERNEL_VER=6.1.0-18-arm64
 DEF_KERNEL_VER=6.6.20-00001-g5763984e45db
 
-DEF_QEMU_DIR=/opt/qemu-9-wip
+DEF_QEMU_DIR=$MY_DIR/generated/host/$(uname -m)/qemu-9-wip
 
 # provide defaults if not overridden by ENV vars
 : ${KERNEL_VER:=$DEF_KERNEL_VER}
@@ -63,6 +63,13 @@ qemu-via-docker() {
         /usr/local/bin/qemu-system-aarch64-swtpm "$@"
 }
 
+fetch-qemu() {
+    case $QEMU_DIR in
+    $MY_DIR/generated/*)
+        ./maybe-fetch ${QEMU_DIR#$MY_DIR/generated/}.tar.gz
+    esac
+}
+
 case $1 in
 
 "kill")
@@ -75,6 +82,7 @@ case $1 in
 ""|"u-boot")
     # can't handle gicv3
     U_BOOT=qemu-firmware/arm64-tfa-optee-uboot.bin
+    fetch-qemu
     ./maybe-fetch ${U_BOOT}.bz2
     ./maybe-fetch ${HD}.bz2
     $QEMU_BIN $QEMU_BASE \
@@ -85,6 +93,7 @@ case $1 in
     ;;
 
 "edk2")
+    fetch-qemu
     ./maybe-fetch ${HD}.bz2
     if [ -z "$EDK_FILE" -o ! -r "$EDK_FILE" ]; then
         echo "EDK_FILE=$EDK_FILE not found"
@@ -102,6 +111,7 @@ case $1 in
     # Won't boot as debian default boot file is not signed
     IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
     FLASH_NAME=trs/flash.bin-qemu
+    fetch-qemu
     ./maybe-fetch ${HD}.bz2
     ./maybe-fetch ${FLASH_NAME}.gz
     ./qemu-system-aarch64-swtpm $QEMU_BASE \
@@ -117,6 +127,7 @@ case $1 in
     # can't handle gicv3 nor memory > 3072
     IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
     FLASH_NAME=trs/flash.bin-qemu
+    fetch-qemu
     ./maybe-fetch ${IMAGE_NAME}.bz2
     ./maybe-fetch ${FLASH_NAME}.gz
     echo "Starting QEMU"
@@ -130,6 +141,7 @@ case $1 in
     ;;
 
 "direct"|"linux"|"linux-direct")
+    fetch-qemu
     ./maybe-fetch ${HD}.bz2
     ./maybe-fetch ${DB}.tar.gz
     $QEMU_BIN $QEMU_BASE \
@@ -142,6 +154,7 @@ case $1 in
     ;;
 
 "xen-direct"|"xen")
+    fetch-qemu
     ./maybe-fetch ${HD}.bz2
     ./maybe-fetch ${DB}.tar.gz
     $QEMU_BIN $QEMU_BASE \

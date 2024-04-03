@@ -1,7 +1,7 @@
 RUNS=100
 TRYS=4
 
-export QEMU_DIR=/opt/qemu-9-wip-clean
+#export QEMU_DIR=/opt/qemu-9-wip-clean
 
 QEMU_BOOT="./qemu-run xen"
 
