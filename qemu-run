@@ -2,14 +2,21 @@
 
 MY_DIR=$PWD
 
+#DEF_KERNEL_VER=6.1.0-18-arm64
+DEF_KERNEL_VER=6.6.20-00001-g5763984e45db
+
+# provide defaults if not overridden by ENV vars
+: ${KERNEL_VER:=$DEF_KERNEL_VER}
+
 # short cut names for some common things
 G=$MY_DIR/generated
 HD=debian-12-arm64/hd.img
 DB=debian-12-arm64/boot
-DBK=$G/$DB/vmlinuz-6.1.0-18-arm64
-DBI=$G/$DB/initrd.img-6.1.0-18-arm64
+DBK=$G/$DB/vmlinuz-$KERNEL_VER
+DBI=$G/$DB/initrd.img-$KERNEL_VER
 DBX=$G/$DB/xen
 
+if [ x"$QEMU_DIR" = x"system" ]; then
 QEMU_BASE="-machine type=virt \
            -cpu cortex-a57 \
            -smp 8 \
