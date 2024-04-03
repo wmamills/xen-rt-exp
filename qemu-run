@@ -134,6 +134,7 @@ addr=0x50000000,initrd=${DBI}
 esac
 
 if [ $? -gt 100 ]; then
+    sleep 5
     reset
     echo "terminal reset due to error exit"
 fi
