@@ -82,6 +82,22 @@ case $1 in
         -bios /usr/share/qemu-efi-aarch64/QEMU_EFI.fd
     ;;
 
+"ts")
+    # Use trusted-substrate with debian
+    # Won't boot as debian default boot file is not signed
+    IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
+    FLASH_NAME=trs/flash.bin-qemu
+    ./maybe-fetch ${HD}.bz2
+    ./maybe-fetch ${FLASH_NAME}.gz
+    ./qemu-system-aarch64-swtpm $QEMU_BASE \
+        -machine type=virt,virtualization=on,secure=on,gic_version=2 \
+        -drive id=disk1,file=${G}/${HD},if=none,format=raw \
+        -device virtio-blk-device,drive=disk1 \
+        -drive if=pflash,unit=0,readonly=off,file=${G}/${FLASH_NAME},format=raw \
+        -m 3072 \
+        -device i6300esb,id=watchdog0
+    ;;
+
 "trs")
     # can't handle gicv3 nor memory > 3072
     IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
