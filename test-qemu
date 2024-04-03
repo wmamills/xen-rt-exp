@@ -33,11 +33,15 @@ TMP_MARKER=test-qemu-marker
 
 RUNS=2
 TRYS=2
+
 BOOT_WAIT=30
 SHUTDOWN_WAIT=30
+KILL_WAIT=10
+
 TEST_WAIT=60
 SSH_FAIL_COUNT=5
 TRY_CONTINUE=true
+
 TESTS=( dummy )
 
 FILTER_TOTALS=true
@@ -275,10 +279,15 @@ kill_qemu() {
         return
     fi
 
-    while qemu_running; do
+    for i in $(seq 1 $KILL_WAIT); do
+        if qemu_running; then
             kill -3 $PID
             sleep 1
+        else
+            return 0
+        fi
     done
+    false
 }
 
 ###### Windows and main
