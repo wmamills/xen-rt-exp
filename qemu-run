@@ -33,7 +33,7 @@ if [ x"$QEMU_DIR" = x"system" ]; then
     done
 else
     export QEMU_BIN=$QEMU_DIR/bin/qemu-system-aarch64
-    export LD_LIBRARY_PATH=$QEMU_DIR/lib/x86_64-linux-gnu/:$LD_LIBRARY_PATH
+    export LD_LIBRARY_PATH=$QEMU_DIR/lib/(uname -m)-linux-gnu/:$LD_LIBRARY_PATH
     EDK_FILE=$QEMU_DIR/share/qemu/edk2-aarch64-code.fd
 fi
 
