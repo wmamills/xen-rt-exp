@@ -105,18 +105,29 @@ record_failure() {
     update_totals
 }
 
+start_timer() {
+    START=$(date +%s)
+}
+
+get_timer() {
+    END=$(date +%s)
+    echo $(( $END - $START ))
+}
+
 wait_for_ssh() {
+    start_timer
     echo -n "waiting for ssh "
     for i in $(seq 1 $BOOT_WAIT); do
         if ssh -o ConnectTimeout=2 $QEMU_SSH_NAME true >/dev/null 2>&1; then
+            DELAY=$(get_timer)
             echo " OK"
             return
         fi
         echo -n "."
         sleep 1
     done
-    echo
-    echo "Failed to get ssh"
+    DELAY=$(get_timer)
+    echo " NOBOOT"
     false
 }
 
@@ -166,7 +177,8 @@ check_ssh() {
     local timeout=$2
     local fails=0
 
-    echo -n "checking ssh (timeout $1 seconds) "
+    echo -n "checking ssh "
+    start_timer
     for i in $(seq 1 $1); do
         if scp -o ConnectTimeout=2 \
             -o ServerAliveInterval=2 \
@@ -175,6 +187,7 @@ check_ssh() {
             echo -n "."
             FAILS=0
             if [ -r test-result.done ]; then
+                DELAY=$(get_timer)
                 # allow the at job to finish and remove itself from the atq
                 sleep 1
 
@@ -192,6 +205,7 @@ check_ssh() {
             echo -n "!"
             FAILS=$(( $FAILS + 1 ))
             if [ $FAILS -gt $timeout ]; then
+                DELAY=$(get_timer)
                 CAUSE="HANG"
                 echo " $CAUSE"
                 return 1
@@ -199,6 +213,7 @@ check_ssh() {
         fi
         sleep 1
     done
+    DELAY=$(get_timer)
     CAUSE="TIMEOUT"
     echo " $CAUSE"
     return 1
@@ -244,16 +259,18 @@ qemu_running() {
 
 wait_qemu_stop() {
     echo -n "waiting for qemu to stop "
+    start_timer
     for i in $(seq 1 $SHUTDOWN_WAIT); do
         if ! qemu_running; then
+            DELAY=$(get_timer)
             echo " OK"
             return
         fi
         echo -n "."
         sleep 1
     done
-    echo
-    echo "qemu did not stop"
+    DELAY=$(get_timer)
+    echo " TIMEOUT"
     false
 }
 
@@ -267,9 +284,7 @@ do_defer_shutdown() {
 
 do_shutdown() {
     remote_action defer_start defer_shutdown
-    if ! wait_qemu_stop; then
-        kill_qemu
-    fi
+    wait_qemu_stop
 }
 
 kill_qemu() {
@@ -327,12 +342,13 @@ do_host() {
             tmux-panel-title "run=$run test=$t boot"
             tmux split-window -h "$ME subcmd qemu $t"
             if wait_for_ssh $BOOT_WAIT; then
+                record_success OK $run BOOT 0 "($DELAY Sec)"
                 status=true
                 try_shutdown=true
                 for try in $(seq 1 $TRYS); do
                     tmux-panel-title "run=$run test=$t try=$try"
                     if ! do_one_test $t; then
-                        record_failure $CAUSE $run $t $try
+                        record_failure $CAUSE $run $t $try "($DELAY Sec)"
                         status=false
                         if [ x"$CAUSE" = x"HANG" ]; then
                             # if ssh is not working don't try shutdown
@@ -346,23 +362,28 @@ do_host() {
                             break
                         fi
                     else
-                        record_success OK $run $t $try
+                        record_success OK $run $t $try "($DELAY Sec)"
                     fi
                 done
                 if $try_shutdown; then
-                    do_shutdown
+                    echo "graceful shutdown of qemu"
+                    if do_shutdown; then
+                        record_success OK      $run SHUTDOWN 0 "($DELAY Sec)"
+                    else
+                        record_failure TIMEOUT $run SHUTDOWN 0 "($DELAY Sec)"
+                        kill_qemu
+                    fi
                 else
+                    echo "forcefully terminate qemu"
                     kill_qemu
                 fi
             else
-                record_failure NOBOOT $run $t 0
+                record_failure NOBOOT $run BOOT 0 "($DELAY Sec)"
                 kill_qemu
             fi
-            echo "sleeping before cleaning"
-            sleep 1
+            sleep 0.5
             clean_tmp
-            echo "sleeping before next run"
-            sleep 1
+            sleep 0.5
         done
     done
     tmux kill-win
