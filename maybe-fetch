@@ -20,7 +20,13 @@ check_saved_images_submodule() {
         # no, init the submodule
         echo "Init the saved-images submodule"
         git submodule init saved-images
-        git submodule update saved-images
+        GIT_LFS_SKIP_SMUDGE=1 git submodule update saved-images
+    fi
+
+    # now if we explicitly want all the files do that now
+    if [ x"$1" = x"all" ]; then
+        echo "Pulling all LFS files, this may take a while"
+        (cd $I; git lfs pull)
     fi
 }
 
@@ -35,6 +41,8 @@ check_image() {
             exit 2
         fi
     fi
+    # make sure we have the real lfs file, not just the reference
+    (cd $I; git lfs pull --include $1)
 }
 
 do_one_file() {
@@ -106,7 +114,7 @@ do_one_file() {
 }
 
 do_all() {
-    check_saved_images_submodule
+    check_saved_images_submodule all
     for f in $(cd images; find * -type f); do
         do_one_file $f
     done
