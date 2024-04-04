@@ -7,7 +7,7 @@
 #KEEP_DIRS=y
 
 main() {
-    D=generated
+    D=images
     mkdir -p $D
     mkdir -p $D/efi
     echo "This is a blank EFI partition" >$D/efi/README.txt

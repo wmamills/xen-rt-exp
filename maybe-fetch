@@ -3,7 +3,7 @@
 MY_DIR=$PWD
 
 # short cut names for some common things
-G=$MY_DIR/generated
+G=$MY_DIR/images
 I=$MY_DIR/saved-images
 MARKER=debian-12-arm64/boot.tar.gz
 
