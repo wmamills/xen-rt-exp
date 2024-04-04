@@ -48,6 +48,7 @@ check_image() {
 do_one_file() {
     DIR=$G/$(dirname $1)
     FILE=$(basename $1)
+    SP="                 "
 
     case $1 in
     */asis.*)
@@ -55,7 +56,7 @@ do_one_file() {
         TARGET=$DIR/${FILE#asis.}
         if ! test -r $TARGET; then
             check_image $1
-            echo "copy $1"
+            echo "copy $1 $SP"
             mkdir -p $DIR
             cp $I/$1 $TARGET
         fi
@@ -65,7 +66,7 @@ do_one_file() {
         TARGET=$G/${1%.tar.gz}
         if ! test -d $TARGET; then
             check_image $1
-            echo "extract $1"
+            echo "extract $1 $SP"
             mkdir -p $DIR
             tar xzf $I/$1 -C $DIR
         fi
@@ -75,7 +76,7 @@ do_one_file() {
         TARGET=$G/$1
         if ! test -r $TARGET; then
             check_image $1
-            echo "copy $1"
+            echo "copy $1 $SP"
             mkdir -p $DIR
             cp $I/$1 $TARGET
         fi
@@ -85,7 +86,7 @@ do_one_file() {
         TARGET=$G/${1%.bz2}
         if ! test -r $TARGET; then
             check_image $1
-            echo "decompress $1"
+            echo "decompress $1 $SP"
             mkdir -p $DIR
             bzcat $I/$1 >$TARGET
         fi
@@ -95,7 +96,7 @@ do_one_file() {
         TARGET=$G/${1%.gz}
         if ! test -r $TARGET; then
             check_image $1
-            echo "decompress $1"
+            echo "decompress $1 $SP"
             mkdir -p $DIR
             zcat $I/$1 >$TARGET
         fi
@@ -105,7 +106,7 @@ do_one_file() {
         TARGET=$G/$1
         if ! test -r $TARGET; then
             check_image $1
-            echo "copy $1"
+            echo "copy $1 $SP"
             mkdir -p $DIR
             cp $I/$1 $G/$1
         fi
