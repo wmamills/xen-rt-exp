@@ -4,6 +4,6 @@
 [submodule "zephyr-apps"]
 	path = zephyr-apps
 	url = https://github.com/wmamills/zephyr-xen-rt.git
-[submodule "images"]
-	path = images
+[submodule "saved-images"]
+	path = saved-images
 	url = https://github.com/wmamills/xen-rt-exp-images.git

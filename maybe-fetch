@@ -4,10 +4,10 @@ MY_DIR=$PWD
 
 # short cut names for some common things
 G=$MY_DIR/generated
-I=$MY_DIR/images
+I=$MY_DIR/saved-images
 MARKER=debian-12-arm64/boot.tar.gz
 
-check_images_submodule() {
+check_saved_images_submodule() {
     # make sure we have git lfs
     if ! git lfs status >/dev/null; then
         echo "You need to install git lfs"
@@ -18,10 +18,9 @@ check_images_submodule() {
     # see if we already have the images
     if ! test -r $I/$MARKER; then
         # no, init the submodule
-        echo "Init the images submodule"
-        git submodule init images
-        echo "Fetch the Images, this may take a while"
-        git submodule update images
+        echo "Init the saved-images submodule"
+        git submodule init saved-images
+        git submodule update saved-images
     fi
 }
 
@@ -29,7 +28,7 @@ check_images_submodule() {
 check_image() {
     if ! test -r $I/$1; then
         # no, maybe we need to fetch the submodule
-        check_images_submodule
+        check_saved_images_submodule
         if ! test -r $I/$1; then
             # we still don't have it, probably a typo
             echo "File $I/$1 does not exist"
@@ -107,7 +106,7 @@ do_one_file() {
 }
 
 do_all() {
-    check_images_submodule
+    check_saved_images_submodule
     for f in $(cd images; find * -type f); do
         do_one_file $f
     done
