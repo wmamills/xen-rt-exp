@@ -1,14 +1,24 @@
 #!/bin/bash
 
-MY_DIR=$PWD
+# Run QEMU with various options for boot firmware and image
 
-DEF_QEMU_DIR=$MY_DIR/images/host/$(uname -m)/qemu-9-wip
+ME=$0
+ME_FULL=$(readlink -f $0)
+MY_DIR=$(dirname $ME_FULL)
+BASE_DIR=$(dirname $MY_DIR)
+
+mkdir -p $BASE_DIR/logs
+PID_FILE=$BASE_DIR/logs/qemu.pid
+
+DEF_QEMU_DIR=$BASE_DIR/images/host/$(uname -m)/qemu-9-wip
+
+FETCH=$BASE_DIR/scripts/maybe-fetch
 
 # provide defaults if not overridden by ENV vars
 : ${QEMU_DIR:=$DEF_QEMU_DIR}
 
 # short cut names for some common things
-G=$MY_DIR/images
+G=$BASE_DIR/images
 HD=debian-12-arm64/hd.img
 DB=debian-12-arm64/boot
 DBK=$G/$DB/vmlinuz
@@ -42,7 +52,7 @@ QEMU_BASE="-machine type=virt \
            -serial mon:stdio \
            -monitor tcp::2220,server=on,wait=off \
            -gdb tcp::2221,server=on,wait=off \
-           -pidfile qemu-run.pid \
+           -pidfile $PID_FILE \
            -m 8192 \
            -nographic"
 
@@ -61,16 +71,16 @@ qemu-via-docker() {
 
 fetch-qemu() {
     case $QEMU_DIR in
-    $MY_DIR/images/*)
-        ./maybe-fetch ${QEMU_DIR#$MY_DIR/images/}.tar.gz
+    $BASE_DIR/images/*)
+        $FETCH ${QEMU_DIR#$BASE_DIR/images/}.tar.gz
     esac
 }
 
 case $1 in
 
 "kill")
-    if [ -r qemu-run.pid ]; then
-        kill -3 $(cat qemu-run.pid)
+    if [ -r $PID_FILE ]; then
+        kill -3 $(cat $PID_FILE)
     fi
     exit 0
     ;;
@@ -79,8 +89,8 @@ case $1 in
     # can't handle gicv3
     U_BOOT=qemu-firmware/arm64-tfa-optee-uboot.bin
     fetch-qemu
-    ./maybe-fetch ${U_BOOT}.bz2
-    ./maybe-fetch ${HD}.bz2
+    $FETCH ${U_BOOT}.bz2
+    $FETCH ${HD}.bz2
     $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -device virtio-blk-device,drive=hd \
@@ -90,7 +100,7 @@ case $1 in
 
 "edk2")
     fetch-qemu
-    ./maybe-fetch ${HD}.bz2
+    $FETCH ${HD}.bz2
     if [ -z "$EDK_FILE" -o ! -r "$EDK_FILE" ]; then
         echo "EDK_FILE=$EDK_FILE not found"
         exit 2
@@ -108,9 +118,9 @@ case $1 in
     IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
     FLASH_NAME=trs/flash.bin-qemu
     fetch-qemu
-    ./maybe-fetch ${HD}.bz2
-    ./maybe-fetch ${FLASH_NAME}.gz
-    ./qemu-system-aarch64-swtpm $QEMU_BASE \
+    $FETCH ${HD}.bz2
+    $FETCH ${FLASH_NAME}.gz
+    $MY_DIR/qemu-system-aarch64-swtpm $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -drive id=disk1,file=${G}/${HD},if=none,format=raw \
         -device virtio-blk-device,drive=disk1 \
@@ -124,10 +134,10 @@ case $1 in
     IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
     FLASH_NAME=trs/flash.bin-qemu
     fetch-qemu
-    ./maybe-fetch ${IMAGE_NAME}.bz2
-    ./maybe-fetch ${FLASH_NAME}.gz
+    $FETCH ${IMAGE_NAME}.bz2
+    $FETCH ${FLASH_NAME}.gz
     echo "Starting QEMU"
-    ./qemu-system-aarch64-swtpm $QEMU_BASE \
+    $MY_DIR/qemu-system-aarch64-swtpm $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
         -drive id=disk1,file=${G}/${IMAGE_NAME},if=none,format=raw \
         -device virtio-blk-device,drive=disk1 \
@@ -138,8 +148,8 @@ case $1 in
 
 "direct"|"linux"|"linux-direct")
     fetch-qemu
-    ./maybe-fetch ${HD}.bz2
-    ./maybe-fetch ${DB}.tar.gz
+    $FETCH ${HD}.bz2
+    $FETCH ${DB}.tar.gz
     $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
@@ -151,8 +161,8 @@ case $1 in
 
 "xen-direct"|"xen")
     fetch-qemu
-    ./maybe-fetch ${HD}.bz2
-    ./maybe-fetch ${DB}.tar.gz
+    $FETCH ${HD}.bz2
+    $FETCH ${DB}.tar.gz
     $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
