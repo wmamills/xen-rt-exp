@@ -51,7 +51,7 @@ case $1 in
     multipass launch -n $JOB_NAME -c 10 -d 15G -m 16G 20.04
     multipass transfer $0 $JOB_NAME:.
     multipass exec $JOB_NAME -- ./$MY_NAME here-sudo
-    echo "Wait for inspection"; read ignore
+    #echo "Wait for inspection"; read ignore
     multipass transfer $JOB_NAME:$NAME.tar.gz .
     multipass delete --purge $JOB_NAME
     ;;
