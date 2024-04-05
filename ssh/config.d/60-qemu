@@ -1,0 +1,12 @@
+Host qemu
+    Hostname localhost
+    Port 2222
+    User root
+    StrictHostKeyChecking no
+    IdentityFile          ./ssh/dummy-key
+    UserKnownHostsFile    /dev/null
+    GlobalKnownHostsFile  /dev/null
+    LogLevel              ERROR
+    ConnectTimeout        60
+    ServerAliveInterval   20
+    ServerAliveCountMax   3

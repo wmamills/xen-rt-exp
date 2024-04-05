@@ -1,0 +1,31 @@
+#!/bin/bash
+
+ME=$0
+ME_FULL=$(readlink -f $0)
+MY_DIR=$(dirname $ME_FULL)
+BASE_DIR=$(dirname $MY_DIR)
+MY_NAME=$(basename $ME)
+REAL_UTIL=${MY_NAME#my-}
+
+case $1 in
+--install)
+    echo "install to user's .ssh dir"
+    echo "not yet"
+    exit 2
+#    if [ -r ~/.ssh/config ]; 
+    ;;
+esac
+
+if [ $PWD != $BASE_DIR -a $REAL_UTIL = "scp" ]; then
+    echo "error: my-scp only works from the $BASE_DIR directory"
+    exit 2
+fi
+
+# just do this everytime in case the dir moves
+cat >$BASE_DIR/ssh/config <<EOF
+Include $BASE_DIR/ssh/config.d/*
+Include ~/.ssh/config
+EOF
+
+cd $BASE_DIR
+$REAL_UTIL -F ./ssh/config "$@"
