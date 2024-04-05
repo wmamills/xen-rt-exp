@@ -1,0 +1,5 @@
+# Allow root login with blank password
+
+PermitRootLogin yes
+PasswordAuthentication yes
+PermitEmptyPasswords yes

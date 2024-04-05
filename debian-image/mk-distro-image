@@ -2,10 +2,13 @@
 
 MY_NAME=$(basename $0)
 MY_DIR=$(dirname $0)
+MY_SUBDIR=$(basename $MY_DIR)
+BASE_DIR=$(cd $MY_DIR/..; pwd)
 
 ARCH=arm64
 DISTRO=debian:12
-BUILD_DIR=debian-12-arm64
+BUILD_DIR=debian-image/generated
+IMAGES=images/debian-12-arm64
 
 do_apt1() {
     # we are in a subshell so this wont out live this function
@@ -17,16 +20,16 @@ do_apt1() {
     # don't let the host system effect the initramfs resume var
     echo "RESUME=none" >/etc/initramfs-tools/conf.d/resume
 
-    apt install -y \
+    apt install -y --no-install-recommends \
         linux-image-$ARCH \
         grub-efi \
         systemd systemd-sysv udev \
         iproute2 iputils-ping net-tools ifupdown isc-dhcp-client \
-        fdisk pciutils \
-        sudo procps nano \
+        fdisk pciutils openssh-server openssh-client \
+        sudo procps nano xterm at \
         manpages man bash-completion less wget readline-common
 
-    apt install -y --no-install-recommends xen-system-$ARCH
+    #apt install -y --no-install-recommends xen-system-$ARCH
 
     # now remove the hack
     rm /etc/initramfs-tools/conf.d/resume
@@ -44,20 +47,51 @@ setup_users() {
 }
 
 do_in_container() {
+    OWNER=$1
+    cd /build
+
+    # install the packages
     (do_apt1)
     setup_users
 
-    mkdir -p /build/$BUILD_DIR
-    echo "make rootfs.tar.gz"
-    tar --one-file-system -czf /build/$BUILD_DIR/rootfs.tar.gz \
-        --exclude /build --exclude .dockerenv /
-    cp -a /boot /build/$BUILD_DIR/
-
+    # copy in the extra stuff
+    rm -rf /tmp/$BUILD_DIR
     mkdir -p /tmp/$BUILD_DIR/
-    cd /tmp/$BUILD_DIR
-    tar -C /tmp/$BUILD_DIR/ -xzf /build/$BUILD_DIR/rootfs.tar.gz
+    cp -a $MY_SUBDIR/my-extra-stuff /tmp/$BUILD_DIR
+    chown -R 0:0 /tmp/$BUILD_DIR
+    cp -a /tmp/$BUILD_DIR /
+    rm -rf /tmp/$BUILD_DIR
+
+    # make the rootfs tar file
+    mkdir -p $BUILD_DIR
+    echo "make rootfs.tar.gz"
+    tar --one-file-system -czf $BUILD_DIR/rootfs.tar.gz \
+        --exclude /build --exclude .dockerenv /
+
+    # keep a copy of the boot dir, for qemu direct boot
+    mkdir -p $IMAGES/boot
+    cp -a /boot $IMAGES/boot/
+    cp -d /vmlinuz /initrd.img $IMAGES/boot/
+
+    # give the contents back to the user
+    chown -R $OWNER $BUILD_DIR
+    chown -R $OWNER $IMAGES
+
+    # now measure the rootfs expanded size
+    mkdir -p /tmp/$BUILD_DIR/
+    tar -C /tmp/$BUILD_DIR -xzf /build/$BUILD_DIR/rootfs.tar.gz
     SIZE_MB=$(du -s -BM /tmp/$BUILD_DIR | awk '{ print substr($1,1,length($1)-1) }')
     echo "Disk size $SIZE_MB"
+}
+
+# The full image exists now, install grub etc
+do_in_qemu() {
+    pass
+    mount /dev/vda2 / -o remount,rw
+    mkdir /boot/efi
+    mount /dev/vda1 /boot/efi
+    grub-install --force-extra-removable /dev/vda1
+    update-grub
 }
 
 # docker should have a pull --as option but it does not
@@ -79,14 +113,22 @@ do_on_host() {
         error "docker is not installed our you do not have access!"
     fi
 
+    # make sure we are in the project root
+    cd $MY_DIR/..
+
     if [ -d $BUILD_DIR ]; then
         mkdir -p old
         mv $BUILD_DIR old/${BUILD_DIR}_$(date +%Y-%m-%d-%H-%M-%S)
     fi
+    if [ -d $IMAGES ]; then
+        mkdir -p old
+        mv $IMAGES old/${IMAGES}_$(date +%Y-%m-%d-%H-%M-%S)
+    fi
 
     foreign_pull
 
-    docker run -it --rm --platform $ARCH -v$MY_DIR:/build $ARCH/$DISTRO /build/$MY_NAME in_container
+    docker run -it --rm --platform $ARCH -v$BASE_DIR:/build $ARCH/$DISTRO \
+        /build/$MY_SUBDIR/$MY_NAME in_container "$UID:$(id -g)"
 }
 
 case $1 in

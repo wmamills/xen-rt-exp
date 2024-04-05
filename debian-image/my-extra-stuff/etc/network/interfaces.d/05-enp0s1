@@ -1,0 +1,2 @@
+auto enp0s1
+iface enp0s1 inet dhcp

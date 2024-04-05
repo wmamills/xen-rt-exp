@@ -7,12 +7,14 @@
 #KEEP_DIRS=y
 
 main() {
-    D=images
+    D=generated
+    I=../images/debian-12-arm64
     mkdir -p $D
     mkdir -p $D/efi
     echo "This is a blank EFI partition" >$D/efi/README.txt
 
     new-vfat $D/boot.efi     250M EFI  $D/efi
-    new-ext4 $D/rootfs.ext4 2700M root debian-12-arm64/rootfs.tar.gz
-    new-gpt-image $D/debian-12-arm64.img 3000M $D/boot.efi $D/rootfs.ext4
+    new-ext4 $D/rootfs.ext4 2700M root $D/rootfs.tar.gz
+    new-gpt-image $I/hd.img 3000M $D/boot.efi $D/rootfs.ext4
+    rm $I/hd.sfdisk
 }
