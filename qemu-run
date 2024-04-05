@@ -2,21 +2,17 @@
 
 MY_DIR=$PWD
 
-#DEF_KERNEL_VER=6.1.0-18-arm64
-DEF_KERNEL_VER=6.6.20-00001-g5763984e45db
-
 DEF_QEMU_DIR=$MY_DIR/images/host/$(uname -m)/qemu-9-wip
 
 # provide defaults if not overridden by ENV vars
-: ${KERNEL_VER:=$DEF_KERNEL_VER}
 : ${QEMU_DIR:=$DEF_QEMU_DIR}
 
 # short cut names for some common things
 G=$MY_DIR/images
 HD=debian-12-arm64/hd.img
 DB=debian-12-arm64/boot
-DBK=$G/$DB/vmlinuz-$KERNEL_VER
-DBI=$G/$DB/initrd.img-$KERNEL_VER
+DBK=$G/$DB/vmlinuz
+DBI=$G/$DB/initrd.img
 DBX=$G/$DB/xen
 
 if [ x"$QEMU_DIR" = x"system" ]; then
