@@ -25,7 +25,8 @@
 ME=$(readlink -f $0)
 MY_NAME=$(basename $ME)
 MY_DIR=$(dirname $ME)
-BASE_DIR=$(dirname $MY_DIR)
+export BASE_DIR=$(dirname $MY_DIR)
+export IMAGES=$BASE_DIR/images
 
 LOGS=$BASE_DIR/logs
 mkdir -p $LOGS
@@ -226,6 +227,36 @@ check_ssh() {
     return 1
 }
 
+sync_files() {
+    REMOTE_FILES=""
+    OK=true
+    for f in $@; do
+        if [ -r $f ]; then
+            f_n=$(basename $f)
+            REMOTE_FILES="$REMOTE_FILES $f_n"
+        else
+            echo "file not found: $f"
+            OK=false
+        fi
+    done
+
+    # we don't want to exit on the first missing file, find all of them
+    # but now that we know there is at least one return error
+    if ! $OK; then
+        return 1
+    fi
+
+    ssh $QEMU_SSH_NAME stat -c "'%f %s %Y %n'" $REMOTE_FILES >$LOGS/remote-stats
+    for f in $@; do
+        f_n=$(basename $f)
+        f_d=$(dirname $f)
+        LOCAL_FILE_STAT=$(cd $f_d; stat -c '%f %s %Y %n' $f_n)
+        if ! grep -q "$LOCAL_FILE_STAT" $LOGS/remote-stats; then
+            scp -p $f $QEMU_SSH_NAME:
+        fi
+    done
+}
+
 # perform a test on the target in a deferred way
 # the test itself will be a separate file
 #
@@ -238,10 +269,18 @@ check_ssh() {
 do_one_deferred_test() {
     echo "test $1"
     if [ ! -x $1-test.sh ]; then
-        echo "$1-test.sh does not exist!, Skipping"
-        CAUSE="SKIP"
+        echo "$1-test.sh does not exist or is not -x"
+        CAUSE="NOFILE"
         DELAY=0
         return 1
+    fi
+    FILES="$(./$1-test.sh files)"
+    if [ -n "$FILES" ]; then
+        if ! sync_files $FILES; then
+            CAUSE="NOFILE"
+            DELAY=0
+            return 1
+        fi
     fi
     rm -rf $LOGS/test-result.*
     scp $1-test.sh $QEMU_SSH_NAME:
