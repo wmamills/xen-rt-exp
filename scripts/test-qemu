@@ -55,7 +55,8 @@ TESTS=( dummy )
 FILTER_TOTALS=true
 
 QEMU_SSH_NAME=qemu
-QEMU_BOOT="scripts/qemu-run xen"
+QEMU_BOOT_SCRIPT="scripts/qemu-run"
+QEMU_BOOT_ARG="xen"
 SESSION_NAME=test-qemu
 
 error() {
@@ -390,7 +391,8 @@ do_host() {
     echo "# RUNS=$RUNS TRYS=$TRYS TESTS=${TESTS[@]}" | tee -a $LOG
     echo "#"                                    >>$LOG
     echo "# QEMU_DIR=$QEMU_DIR"                 >>$LOG
-    echo "# QEMU_BOOT=$QEMU_BOOT"               >>$LOG
+    echo "# QEMU_BOOT_SCRIPT=$QEMU_BOOT_SCRIPT" >>$LOG
+    echo "# QEMU_BOOT_ARG=$QEMU_BOOT_ARG"       >>$LOG
     echo "# KERNEL_VER=$KERNEL_VER"             >>$LOG
     echo "#"                                    >>$LOG
     echo "# BOOT_WAIT=$BOOT_WAIT"               >>$LOG
@@ -452,8 +454,8 @@ do_host() {
 
 # This is the tmux window pane function to actually run qemu
 do_qemu() {
-    tmux-panel-title "$QEMU_BOOT $@"
-    QEMU_TMUX=no $BASE_DIR/$QEMU_BOOT "$@"
+    tmux-panel-title "$QEMU_BOOT_SCRIPT $QEMU_BOOT_ARG $@"
+    QEMU_TMUX=no $BASE_DIR/$QEMU_BOOT_SCRIPT $QEMU_BOOT_ARG "$@"
 }
 
 # main starts things up and then waits for tmux to finish or detach
