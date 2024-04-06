@@ -409,6 +409,18 @@ main() {
         exit 2
     fi
 
+    if [ -z "$1" -o ! -d $1 ]; then
+        error -e "The first argument to test-qemu should be a directory, like:\n" \
+        "./scripts/test-qemu tests/dummy"
+    else
+        cd $1; shift
+    fi
+
+    if [ -e ./test-qemu-vars ]; then
+        . ./test-qemu-vars
+        export TEST_QEMU_VARS=$PWD/test-qemu-vars
+    fi
+
     : ${TMPDIR:=/tmp}
     export MY_TMPDIR=$(mktemp -d -p $TMPDIR test-qemu-XXXXXXXX)
     mkdir -p $MY_TMPDIR/test-qemu-tmp || error "Can't create tmp dir"
@@ -444,8 +456,8 @@ main() {
     fi
 }
 
-if [ -e ./test-qemu-vars ]; then
-    . ./test-qemu-vars
+if [ -n "$TEST_QEMU_VARS" ]; then
+    . $TEST_QEMU_VARS
 fi
 
 if [ x"$1" = x"subcmd" ]; then
