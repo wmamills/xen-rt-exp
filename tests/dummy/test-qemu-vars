@@ -3,11 +3,11 @@ TRYS=4
 
 #export QEMU_DIR=/opt/qemu-9-wip-clean
 
-QEMU_BOOT="./qemu-run xen"
+QEMU_BOOT="scripts/qemu-run linux"
 
 BOOT_WAIT=100
 SHUTDOWN_WAIT=100
 
 TRY_CONTINUE=false
 FILTER_TOTALS=false
-TESTS=( zephyr )
+TESTS=( dummy )

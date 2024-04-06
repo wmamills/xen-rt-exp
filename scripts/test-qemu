@@ -25,9 +25,16 @@
 ME=$(readlink -f $0)
 MY_NAME=$(basename $ME)
 MY_DIR=$(dirname $ME)
+BASE_DIR=$(dirname $MY_DIR)
 
-NOW=$(date +%Y-%m-%d-%H%M%S)
-LOG=test-log-$NOW.log
+LOGS=$BASE_DIR/logs
+mkdir -p $LOGS
+PID_FILE=$LOGS/qemu.pid
+
+: ${NOW:=$(date +%Y-%m-%d-%H%M%S)}
+export NOW
+LOG=$LOGS/test-log-$NOW.log
+TOTALS=$LOGS/totals-$NOW.txt
 
 TMP_MARKER=test-qemu-marker
 
@@ -47,7 +54,7 @@ TESTS=( dummy )
 FILTER_TOTALS=true
 
 QEMU_SSH_NAME=qemu
-QEMU_BOOT="./qemu-run xen"
+QEMU_BOOT="scripts/qemu-run xen"
 SESSION_NAME=test-qemu
 
 error() {
@@ -66,15 +73,15 @@ format_msg() {
 }
 
 update_totals() {
-    echo "TOTAL=$TOTAL FAIL=$FAIL" >totals.new
-    echo "LAST $LAST_OK" >>totals.new
+    echo "TOTAL=$TOTAL FAIL=$FAIL" >$TOTALS.new
+    echo "LAST $LAST_OK" >>$TOTALS.new
     if $FILTER_TOTALS; then
-        tac $LOG | grep -v "^OK " | grep -v "^#" | head -n 25 >>totals.new
+        tac $LOG | grep -v "^OK " | grep -v "^#" | head -n 25 >>$TOTALS.new
     else
-        echo "LAST $LAST_FAIL" >>totals.new
-        tac $LOG | grep -v "^#" | head -n 25 >>totals.new
+        echo "LAST $LAST_FAIL" >>$TOTALS.new
+        tac $LOG | grep -v "^#" | head -n 25 >>$TOTALS.new
     fi
-    mv -f totals.new totals.txt
+    mv -f $TOTALS.new $TOTALS
 }
 
 init_totals() {
@@ -250,8 +257,8 @@ do_one_test() {
 
 ###### Shutdown support
 qemu_running() {
-    if [ -r qemu-run.pid ]; then
-        ps --pid $(cat qemu-run.pid) >/dev/null
+    if [ -r $PID_FILE ]; then
+        ps --pid $(cat $PID_FILE) >/dev/null
     else
         false
     fi
@@ -288,8 +295,8 @@ do_shutdown() {
 }
 
 kill_qemu() {
-    if [ -r qemu-run.pid ]; then
-        PID=$(cat qemu-run.pid)
+    if [ -r $PID_FILE ]; then
+        PID=$(cat $PID_FILE)
     else
         return
     fi
@@ -308,7 +315,7 @@ kill_qemu() {
 ###### Windows and main
 do_totals() {
     tmux-panel-title "totals"
-    watch -t -n 1 -d cat totals.txt
+    watch -t -n 1 -d cat $TOTALS
 }
 
 clean_tmp() {
@@ -381,9 +388,9 @@ do_host() {
                 record_failure NOBOOT $run BOOT 0 "($DELAY Sec)"
                 kill_qemu
             fi
-            sleep 0.5
+            sleep 1
             clean_tmp
-            sleep 0.5
+            sleep 1
         done
     done
     tmux kill-win
@@ -392,7 +399,7 @@ do_host() {
 # This is the tmux window pane function to actually run qemu
 do_qemu() {
     tmux-panel-title "$QEMU_BOOT $@"
-    QEMU_TMUX=no $QEMU_BOOT "$@"
+    QEMU_TMUX=no $BASE_DIR/$QEMU_BOOT "$@"
 }
 
 # main starts things up and then waits for tmux to finish or detach
@@ -411,7 +418,7 @@ main() {
     export TMPDIR=$MY_TMPDIR/test-qemu-tmp
 
     touch $LOG
-    echo "Starting..." >totals.txt
+    echo "Starting..." >$TOTALS
 
     tmux start-server
     tmux new-session -d -s QEMU -n $QEMU_WIN_NAME -d "$ME subcmd totals"
@@ -432,7 +439,8 @@ main() {
     # if finished or killed (but not detached)
     if ! tmux has -t$SESS >/dev/null 2>&1; then
         clean_tmp
-        cat totals.txt
+        echo "LOG=$LOG"
+        cat $TOTALS
     fi
 }
 
