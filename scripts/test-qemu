@@ -240,7 +240,7 @@ do_one_deferred_test() {
     if [ ! -r $1-test.sh ]; then
         error "$1-test.sh does not exist!"
     fi
-    rm -rf test-result.*
+    rm -rf $LOGS/test-result.*
     scp $1-test.sh $QEMU_SSH_NAME:
     remote_action defer_start defer_test_run "$@"
     check_ssh $TEST_WAIT $SSH_FAIL_COUNT
