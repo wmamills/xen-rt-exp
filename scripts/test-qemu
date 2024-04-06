@@ -34,8 +34,8 @@ PID_FILE=$LOGS/qemu.pid
 
 : ${NOW:=$(date +%Y-%m-%d-%H%M%S)}
 export NOW
-LOG=$LOGS/test-log-$NOW.log
-TOTALS=$LOGS/totals-$NOW.txt
+LOG=$LOGS/$NOW-test-log.log
+TOTALS=$LOGS/$NOW-totals.txt
 
 TMP_MARKER=test-qemu-marker
 
