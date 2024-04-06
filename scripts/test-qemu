@@ -143,7 +143,7 @@ wait_for_ssh() {
 
 # we are on the host, perform a subcmd on the target
 remote_action() {
-    scp $ME $QEMU_SSH_NAME:
+    scp -q $ME $QEMU_SSH_NAME:
     ssh $QEMU_SSH_NAME chmod +x ./$MY_NAME
     ssh $QEMU_SSH_NAME ./$MY_NAME subcmd "$@"
 }
@@ -151,7 +151,19 @@ remote_action() {
 # we are on the target, start an detached action
 # (The actual deferral delay is in the action function)
 do_defer_start() {
-    echo "start $@"
+    case $1 in
+    defer_test_run)
+        #echo "deferred $2 $3 $4 $5 $6 $7 $8 $9"
+        true
+        ;;
+    defer_shutdown)
+        #echo "deferred shutdown $2 $3 $4 $5 $6 $7 $8 $9"
+        true
+        ;;
+    *)
+        echo "start $@"
+        ;;
+    esac
     rm -rf test-result.*
     echo "$ME subcmd $@" | at now + 0 minute  >test-result.start 2>&1
 }
@@ -283,7 +295,7 @@ do_one_deferred_test() {
         fi
     fi
     rm -rf $LOGS/test-result.*
-    scp $1-test.sh $QEMU_SSH_NAME:
+    scp -q $1-test.sh $QEMU_SSH_NAME:
     remote_action defer_start defer_test_run "$@"
     check_ssh $TEST_WAIT $SSH_FAIL_COUNT
 }
