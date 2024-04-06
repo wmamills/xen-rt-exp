@@ -3,7 +3,7 @@ TRYS=4
 
 #export QEMU_DIR=/opt/qemu-9-wip-clean
 
-QEMU_BOOT="scripts/qemu-run linux"
+QEMU_BOOT_ARG="linux"
 
 BOOT_WAIT=100
 SHUTDOWN_WAIT=100

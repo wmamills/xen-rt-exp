@@ -458,6 +458,26 @@ do_qemu() {
     QEMU_TMUX=no $BASE_DIR/$QEMU_BOOT_SCRIPT $QEMU_BOOT_ARG "$@"
 }
 
+mk_env() {
+cat >$ENV_FILE <<EOF
+RUNS="$RUNS"
+TRYS="$TRYS"
+BOOT_WAIT="$BOOT_WAIT"
+SHUTDOWN_WAIT="$SHUTDOWN_WAIT"
+KILL_WAIT="$KILL_WAIT"
+TEST_WAIT="$TEST_WAIT"
+SSH_FAIL_COUNT="$SSH_FAIL_COUNT"
+TRY_CONTINUE="$TRY_CONTINUE"
+FILTER_TOTALS="$FILTER_TOTALS"
+QEMU_SSH_NAME="$QEMU_SSH_NAME"
+QEMU_BOOT_SCRIPT="$QEMU_BOOT_SCRIPT"
+QEMU_BOOT_ARG="$QEMU_BOOT_ARG"
+SESSION_NAME="$SESSION_NAME"
+
+TESTS=( ${TESTS[@]} )
+EOF
+}
+
 # main starts things up and then waits for tmux to finish or detach
 main() {
     if [ -n "$TMUX" ]; then
@@ -476,6 +496,32 @@ main() {
         . ./test-qemu-vars
         export TEST_QEMU_VARS=$PWD/test-qemu-vars
     fi
+
+    while [ -n "$1" ]; do
+        ARG="$1"; shift
+        echo "ARG=$ARG"
+        case "$ARG" in
+        only)
+            TESTS=( )
+            ;;
+        once)
+            export RUNS=1; export TRYS=1
+            ;;
+        *)
+            if [ -r $ARG-test.sh ]; then
+                TESTS+=( $ARG )
+            elif [ -r $ARG -a "$ARG" != "${ARG%-test.sh}" ]; then
+                TESTS+=( ${ARG%-test.sh} )
+            else
+                echo "Don't know what to do with $ARG"
+            fi
+            ;;
+        esac
+    done
+
+    export ENV_FILE=$LOGS/this-session-qemu-vars
+    mk_env
+    export TEST_QEMU_VARS=$ENV_FILE
 
     : ${TMPDIR:=/tmp}
     export MY_TMPDIR=$(mktemp -d -p $TMPDIR test-qemu-XXXXXXXX)
