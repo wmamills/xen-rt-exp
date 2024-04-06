@@ -1,0 +1,14 @@
+# RUNS=100 TRYS=4 TESTS=zephyr
+#
+# QEMU_DIR=system
+# QEMU_BOOT=./qemu-run xen
+# KERNEL_VER=
+#
+# BOOT_WAIT=100
+# SHUTDOWN_WAIT=100
+# TEST_WAIT=60
+# TRY_CONTINUE=false
+OK          1 BOOT     0 (47 Sec)
+HANG        1 zephyr   1 (25 Sec)
+OK          2 BOOT     0 (48 Sec)
+HANG        2 zephyr   1 (24 Sec)
