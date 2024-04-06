@@ -237,8 +237,11 @@ check_ssh() {
 # always sets global var CAUSE
 do_one_deferred_test() {
     echo "test $1"
-    if [ ! -r $1-test.sh ]; then
-        error "$1-test.sh does not exist!"
+    if [ ! -x $1-test.sh ]; then
+        echo "$1-test.sh does not exist!, Skipping"
+        CAUSE="SKIP"
+        DELAY=0
+        return 1
     fi
     rm -rf $LOGS/test-result.*
     scp $1-test.sh $QEMU_SSH_NAME:
