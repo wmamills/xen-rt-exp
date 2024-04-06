@@ -11,15 +11,15 @@ run_test() {
 }
 
 case $1 in
-"run")
+""|"run")
     shift
     run_test "$@"
     ;;
 "files")
-    echo zephyr-*.conf zephyr-*.bin
+    echo zephyr-hello.conf $IMAGES/zephyr-hello-mod-givc3.bin
     ;;
 *)
-    echo "unknown command $1"
+    echo "$0: unknown command $1"
     false
     ;;
 esac
