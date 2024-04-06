@@ -190,15 +190,15 @@ check_ssh() {
         if scp -o ConnectTimeout=2 \
             -o ServerAliveInterval=2 \
             -o ServerAliveCountMax=2 \
-            $QEMU_SSH_NAME:test-result.* . >/dev/null 2>&1; then
+            $QEMU_SSH_NAME:test-result.* $LOGS/. >/dev/null 2>&1; then
             echo -n "."
             FAILS=0
-            if [ -r test-result.done ]; then
+            if [ -r $LOGS/test-result.done ]; then
                 DELAY=$(get_timer)
                 # allow the at job to finish and remove itself from the atq
                 sleep 1
 
-                if [ x"$(cat test-result.done)" = x"0" ]; then
+                if [ x"$(cat $LOGS/test-result.done)" = x"0" ]; then
                     CAUSE="OK"
                     echo " $CAUSE"
                     return 0
