@@ -50,7 +50,7 @@ TEST_WAIT=60
 SSH_FAIL_COUNT=5
 TRY_CONTINUE=true
 
-TESTS=( dummy )
+TESTS=( )
 
 FILTER_TOTALS=true
 
@@ -494,7 +494,6 @@ main() {
 
     if [ -e ./test-qemu-vars ]; then
         . ./test-qemu-vars
-        export TEST_QEMU_VARS=$PWD/test-qemu-vars
     fi
 
     while [ -n "$1" ]; do
