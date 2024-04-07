@@ -147,6 +147,7 @@ case $1 in
     ;;
 
 "direct"|"linux"|"linux-direct")
+    : ${KERNEL_CMDLINE:=console=ttyAMA0 root=/dev/vda2}
     fetch-qemu
     $FETCH ${HD}.bz2
     $FETCH ${DB}.tar.gz
@@ -156,10 +157,12 @@ case $1 in
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
         -kernel ${DBK} \
         -initrd ${DBI} \
-        -append "console=ttyAMA0 root=/dev/vda2"
+        -append "${KERNEL_CMDLINE} ${KERNEL_CMDLINE_EXTRA}"
     ;;
 
 "xen-direct"|"xen")
+    : ${KERNEL_CMDLINE:=console=hvc0 earlyprintk=xen root=/dev/vda2}
+    : ${XEN_CMDLINE:=dom0_mem=4G,max:4G dom0_max_vcpus=4 dom0_vcpus_pin=true sched=null loglvl=all guest_loglvl=all}
     fetch-qemu
     $FETCH ${HD}.bz2
     $FETCH ${DB}.tar.gz
@@ -168,10 +171,10 @@ case $1 in
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
         -kernel ${DBX} \
-        -append "dom0_mem=4G,max:4G dom0_max_vcpus=4 dom0_vcpus_pin=true sched=null loglvl=all guest_loglvl=all" \
+        -append "${XEN_CMDLINE} ${XEN_CMDLINE_EXTRA}" \
         -device guest-loader,\
 addr=0x49000000,kernel=${DBK},\
-bootargs="console=hvc0 earlyprintk=xen root=/dev/vda2" \
+bootargs="${KERNEL_CMDLINE} ${KERNEL_CMDLINE_EXTRA}" \
         -device guest-loader,\
 addr=0x50000000,initrd=${DBI}
     ;;
