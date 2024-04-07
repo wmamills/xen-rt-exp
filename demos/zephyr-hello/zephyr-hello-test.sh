@@ -16,7 +16,7 @@ case $1 in
     run_test "$@"
     ;;
 "files")
-    echo zephyr-hello.conf $IMAGES/zephyr-hello-mod-givc3.bin
+    echo zephyr-hello.conf $IMAGES/zephyr-apps/zephyr-hello-mod-gicv3.bin
     ;;
 *)
     echo "$0: unknown command $1"
