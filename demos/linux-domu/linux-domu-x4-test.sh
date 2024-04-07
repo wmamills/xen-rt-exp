@@ -17,15 +17,16 @@ run_test() {
 }
 
 case $1 in
-"run")
+""|"run")
     shift
     run_test "$@"
     ;;
 "files")
-    echo linux-domu.conf min/*
+    # we want everything in the min dir
+    echo linux-domu.conf $IMAGES/min
     ;;
 *)
-    echo "unknown command $1"
+    echo "$0: unknown command $1"
     false
     ;;
 esac
