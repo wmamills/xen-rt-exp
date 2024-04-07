@@ -259,7 +259,8 @@ sync_files() {
         return 1
     fi
 
-    ssh $QEMU_SSH_NAME stat -c "'%f %s %Y %n'" $REMOTE_FILES >$LOGS/remote-stats
+    ssh $QEMU_SSH_NAME stat -c "'%f %s %Y %n'" $REMOTE_FILES \
+        >$LOGS/remote-stats 2>$LOGS/remote-stats.stderr
     for f in $@; do
         f_n=$(basename $f)
         f_d=$(dirname $f)
