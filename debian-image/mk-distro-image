@@ -1,5 +1,6 @@
 #!/bin/bash
 
+ME=$0
 MY_NAME=$(basename $0)
 MY_DIR=$(dirname $0)
 MY_SUBDIR=$(basename $MY_DIR)
@@ -8,9 +9,13 @@ BASE_DIR=$(cd $MY_DIR/..; pwd)
 ARCH=arm64
 DISTRO=debian:12
 BUILD_DIR=debian-image/generated
-IMAGES=images/debian-12-arm64
+IMAGE_SUB_DIR=debian-12-arm64
+IMAGES=images/$IMAGE_SUB_DIR
+SAVED_IMAGES=saved-images/$IMAGE_SUB_DIR
 
-do_apt1() {
+XEN_DEB=xen/xen-upstream-4.19-unstable.deb
+
+apt1() {
     # we are in a subshell so this wont out live this function
     export DEBIAN_FRONTEND=noninteractive
 
@@ -23,44 +28,85 @@ do_apt1() {
     apt install -y --no-install-recommends \
         linux-image-$ARCH \
         grub-efi \
-        systemd systemd-sysv udev \
+        systemd systemd-sysv udev  \
         iproute2 iputils-ping net-tools ifupdown isc-dhcp-client \
         fdisk pciutils openssh-server openssh-client \
         sudo procps nano xterm at \
         manpages man bash-completion less wget readline-common
 
-    #apt install -y --no-install-recommends xen-system-$ARCH
+    # Don't install debian xen, but this is how
+    # apt install -y --no-install-recommends xen-system-$ARCH
+
+    systemctl enable systemd-networkd
 
     # now remove the hack
     rm /etc/initramfs-tools/conf.d/resume
-}
-
-do_apt2() {
-    # we are in a subshell so this wont out live this function
-    export DEBIAN_FRONTEND=noninteractive
-
-    apt install -y mtools e2fsprogs fakeroot fdisk git
 }
 
 setup_users() {
     passwd -d root
 }
 
-do_in_container() {
+add_xen() {
+    # instal the package from images
+    apt install ./images/$XEN_DEB
+
+    # give /usr/local/lib higher priority than /lib/aarch64-linux-gnu
+    LD_CONF=/etc/ld.so.conf.d
+    L1=libc.conf
+    L2=aarch64-linux-gnu.conf
+    mv $LD_CONF/$L1 $LD_CONF/20-$L1
+    mv $LD_CONF/$L1 $LD_CONF/50-$L1
+    ldconfig
+
+    # install needed libs
+    apt install -y libyajl2 libfdt1
+    systemctl enable xencommons
+
+    SLINK=$(readlink /boot/xen)
+    ln -s boot/$SLINK /xen
+
+    # delete the un-versioned symlink in /boot as debian initramfs-tools does
+    # not like it
+    rm /boot/xen
+}
+
+trim_modules() {
+    for k in /lib/modules/*; do
+        for d in media gpu infiband usb iio net/wireless net/usb; do
+            rm -rf $k/kernel/drivers/$d
+        done
+
+        find $k/kernel/drivers/net/ethernet -name "*.ko" \
+            ! -name "e100*.ko" \
+            ! -name "virt*" \
+            ! -name "xen*" \
+            | xargs rm
+    done
+}
+
+in_container() {
     OWNER=$1
     cd /build
 
     # install the packages
-    (do_apt1)
+    (apt1)
     setup_users
+
+    (add_xen)
+    (trim_modules)
+    apt clean
 
     # copy in the extra stuff
     rm -rf /tmp/$BUILD_DIR
     mkdir -p /tmp/$BUILD_DIR/
     cp -a $MY_SUBDIR/my-extra-stuff /tmp/$BUILD_DIR
     chown -R 0:0 /tmp/$BUILD_DIR
-    cp -a /tmp/$BUILD_DIR /
+    (cd /tmp/$BUILD_DIR/my-extra-stuff; cp -a * /)
     rm -rf /tmp/$BUILD_DIR
+
+    # leave a copy of myself
+    cp $0 /post_process
 
     # make the rootfs tar file
     mkdir -p $BUILD_DIR
@@ -72,6 +118,7 @@ do_in_container() {
     mkdir -p $IMAGES/boot
     cp -a /boot $IMAGES/boot/
     cp -d /vmlinuz /initrd.img $IMAGES/boot/
+    cp -d /xen* $IMAGES/boot/
 
     # give the contents back to the user
     chown -R $OWNER $BUILD_DIR
@@ -84,18 +131,9 @@ do_in_container() {
     echo "Disk size $SIZE_MB"
 }
 
-# The full image exists now, install grub etc
-do_in_qemu() {
-    pass
-    mount /dev/vda2 / -o remount,rw
-    mkdir /boot/efi
-    mount /dev/vda1 /boot/efi
-    grub-install --force-extra-removable /dev/vda1
-    update-grub
-}
-
 # docker should have a pull --as option but it does not
 # leaving foreign container images in normal name space causes issues
+# so we do this
 foreign_pull() {
     OLD_ID=$(docker image list --format json $DISTRO | jq -r '.ID')
     docker pull --platform $ARCH $DISTRO
@@ -108,35 +146,131 @@ foreign_pull() {
     fi
 }
 
-do_on_host() {
+do_rootfs() {
     if ! docker images >/dev/null; then
-        error "docker is not installed our you do not have access!"
+        error "docker is not installed or you do not have access!"
     fi
 
     # make sure we are in the project root
     cd $MY_DIR/..
 
+    # get any image assets we need
+    ./scripts/maybe-fetch $XEN_DEB
+
+    # save any existing version before we trash them
     if [ -d $BUILD_DIR ]; then
-        mkdir -p old
+        mkdir -p $(dirname old/${BUILD_DIR})
         mv $BUILD_DIR old/${BUILD_DIR}_$(date +%Y-%m-%d-%H-%M-%S)
     fi
     if [ -d $IMAGES ]; then
-        mkdir -p old
+        mkdir -p $(dirname old/${IMAGES})
         mv $IMAGES old/${IMAGES}_$(date +%Y-%m-%d-%H-%M-%S)
     fi
 
+    # get a fresh copy of debian-12 for arm64 as arm64/debian:12
     foreign_pull
 
     docker run -it --rm --platform $ARCH -v$BASE_DIR:/build $ARCH/$DISTRO \
         /build/$MY_SUBDIR/$MY_NAME in_container "$UID:$(id -g)"
 }
 
-case $1 in
-in_container)
-    shift
-    do_in_container "$@"
+# The rootfs.tar.gz file exists, now make a whole disk image
+# the efi partition will be blank
+do_disk_img() {
+    # make sure we are in the project root
+    make-image-targets $MY_DIR
+}
+
+# The full image exists now, install grub in the efi partition
+in_qemu_make_efi() {
+    mount /dev/vda2 / -o remount,rw
+    mkdir /boot/efi
+    mount /dev/vda1 /boot/efi
+    grub-install --force-extra-removable /dev/vda1
+    update-grub
+}
+
+# we are in qemu in a fresh boot
+# the initrd.img has alreadly mounted proc & sysfs
+# and the rootfs is mounted rw
+qemu_fresh_boot_post_process() {
+    echo "Post process disk image:"
+    echo "/post_process $@"
+    in_qemu_make_efi "$@"
+    sync; sync
+    mount / -o remount,ro
+    poweroff -f
+}
+
+# on host and we want to run post-processing
+# start qemu with the kernel & initrd already setup
+# and tell it to run the copy of ourselves we already put in the root
+do_make_efi() {
+    KERNEL_CMDLINE_EXTRA="init=/post_process rw" $BASE_DIR/scripts/qemu-run linux
+}
+
+# on host and we want to run post-processing
+# start qemu with the kernel & initrd already setup
+# and tell it to run the copy of ourselves we already put in the root
+do_img_dbg() {
+    echo 'use "poweroff -f" inside machine to exit, or just use ^A x'
+    echo 'remember that the disk image is live, so sync after changes'
+    echo 'starting image in 2 seconds'
+    sleep 2
+    KERNEL_CMDLINE_EXTRA="init=/bin/bash rw" $BASE_DIR/scripts/qemu-run linux
+}
+
+do_save() {
+    echo "compress $IMAGE_SUB_DIR/hd.img"
+    bzip2 -zkc $IMAGES/hd.img >$SAVED_IMAGES/hd.img.bz2
+    echo "archive $IMAGE_SUB_DIR/boot dir"
+    tar czf $SAVED_IMAGES/boot.tar.gz -C $IMAGES boot
+}
+
+do_all() {
+    do_rootfs "$@"
+    do_disk_img "$@"
+    do_make_efi "$@"
+    do_save "$@"
+}
+
+help() {
+    echo "$ME <step>"
+    echo "where step is one of"
+    echo "  rootfs          make rootfs.tar.gz and direct boot directory"
+    echo "  disk_img        make hd.img from rootfs w/ blank efi"
+    echo "  make_efi        in hd.img, populate efi partition for bootloaders"
+    #echo "  post_efi        boot hd.img via bootloader and save env vars"
+    echo "  save            save the results in saved-images (won't commit)"
+    echo "  all             all the above"
+    echo "  img_dbg         hd.img debug (before it can boot)"
+}
+
+main() {
+    case $1 in
+    "")
+        echo "specify what step"
+        help
+        ;;
+    in_container*)
+        CMD=$1; shift
+        $CMD "$@"
+        ;;
+    help)
+        help
+        ;;
+    *)
+        CMD=$1; shift
+        do_$CMD "$@"
+        ;;
+    esac
+}
+
+case $ME in
+/post_process)
+    qemu_fresh_boot_post_process
     ;;
 *)
-    do_on_host "$@"
+    main $@
     ;;
 esac
