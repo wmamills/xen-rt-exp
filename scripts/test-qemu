@@ -240,10 +240,45 @@ check_ssh() {
     return 1
 }
 
+prefetch() {
+    FULL_FN=$(readlink -f $1)
+
+    # for now assume any file that needs prefetching will be using
+    # a full absolute path.  The *-test.sh scripts should be using the
+    # $IMAGES that we gave them so this should be true.
+    # the *-test.sh file can and should return relative names for anything
+    # that is not in images/
+    #
+    # NOTE: $FULL_FN will be blank for any file that does not exist yet
+    case $1 in
+    $IMAGES/*)
+        KEY=${1#$IMAGES/}
+        #echo "prefetch $KEY"
+        $BASE_DIR/scripts/maybe-fetch "$KEY"
+        ;;
+    *)
+        KEY=${1#$BASE_DIR/}
+        #echo "not prefetch-able $KEY"
+        ;;
+    esac
+}
+
 sync_files() {
+    #echo "sync_files $@"
     REMOTE_FILES=""
+    LOCAL_FILES=""
     OK=true
-    for f in $@; do
+
+    for f in "$@"; do
+        prefetch $f
+        if [ -d $f ]; then
+            LOCAL_FILES="$LOCAL_FILES $f/*"
+        else
+            LOCAL_FILES="$LOCAL_FILES $f"
+        fi
+    done
+
+    for f in $LOCAL_FILES; do
         if [ -r $f ]; then
             f_n=$(basename $f)
             REMOTE_FILES="$REMOTE_FILES $f_n"
@@ -256,6 +291,7 @@ sync_files() {
     # we don't want to exit on the first missing file, find all of them
     # but now that we know there is at least one return error
     if ! $OK; then
+        #echo "Enter to continue"; read ignored
         return 1
     fi
 
