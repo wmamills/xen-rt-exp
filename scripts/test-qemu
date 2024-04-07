@@ -278,6 +278,7 @@ sync_files() {
         fi
     done
 
+    #echo "LOCAL_FILES=$LOCAL_FILES"
     for f in $LOCAL_FILES; do
         if [ -r $f ]; then
             f_n=$(basename $f)
@@ -288,6 +289,8 @@ sync_files() {
         fi
     done
 
+    #echo "REMOTE_FILES=$REMOTE_FILES"
+
     # we don't want to exit on the first missing file, find all of them
     # but now that we know there is at least one return error
     if ! $OK; then
@@ -297,7 +300,7 @@ sync_files() {
 
     ssh $QEMU_SSH_NAME stat -c "'%f %s %Y %n'" $REMOTE_FILES \
         >$LOGS/remote-stats 2>$LOGS/remote-stats.stderr
-    for f in $@; do
+    for f in $LOCAL_FILES; do
         f_n=$(basename $f)
         f_d=$(dirname $f)
         LOCAL_FILE_STAT=$(cd $f_d; stat -c '%f %s %Y %n' $f_n)
