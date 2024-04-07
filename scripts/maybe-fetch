@@ -5,8 +5,10 @@ MY_DIR=$(dirname $ME)
 BASE_DIR=$(dirname $MY_DIR)
 
 # short cut names for some common things
-G=$BASE_DIR/images
-I=$BASE_DIR/saved-images
+# S = saved images (aka templates)
+# U = in use images
+U=$BASE_DIR/images
+S=$BASE_DIR/saved-images
 MARKER=debian-12-arm64/boot.tar.gz
 
 check_saved_images_submodule() {
@@ -18,7 +20,7 @@ check_saved_images_submodule() {
     fi
 
     # see if we already have the images
-    if ! test -r $I/$MARKER; then
+    if ! test -r $S/$MARKER; then
         # no, init the submodule
         echo "Init the saved-images submodule"
         git submodule init saved-images
@@ -28,27 +30,27 @@ check_saved_images_submodule() {
     # now if we explicitly want all the files do that now
     if [ x"$1" = x"all" ]; then
         echo "Pulling all LFS files, this may take a while"
-        (cd $I; git lfs pull)
+        (cd $S; git lfs pull)
     fi
 }
 
 # see if we have the image file
 check_image() {
-    if ! test -r $I/$1; then
+    if ! test -r $S/$1; then
         # no, maybe we need to fetch the submodule
         check_saved_images_submodule
-        if ! test -r $I/$1; then
+        if ! test -r $S/$1; then
             # we still don't have it, probably a typo
-            echo "File $I/$1 does not exist"
+            echo "File $S/$1 does not exist"
             exit 2
         fi
     fi
     # make sure we have the real lfs file, not just the reference
-    (cd $I; git lfs pull --include $1)
+    (cd $S; git lfs pull --include $1)
 }
 
 do_one_file() {
-    DIR=$G/$(dirname $1)
+    DIR=$U/$(dirname $1)
     FILE=$(basename $1)
     SP="                 "
 
@@ -60,57 +62,57 @@ do_one_file() {
             check_image $1
             echo "copy $1 $SP"
             mkdir -p $DIR
-            cp $I/$1 $TARGET
+            cp $S/$1 $TARGET
         fi
         ;;
     *.tar.gz)
         # The target is a directory for this case
-        TARGET=$G/${1%.tar.gz}
+        TARGET=$U/${1%.tar.gz}
         if ! test -d $TARGET; then
             check_image $1
             echo "extract $1 $SP"
             mkdir -p $DIR
-            tar xzf $I/$1 -C $DIR
+            tar xzf $S/$1 -C $DIR
         fi
         ;;
     *.cpio.gz)
         # keep compressed, just copy
-        TARGET=$G/$1
+        TARGET=$U/$1
         if ! test -r $TARGET; then
             check_image $1
             echo "copy $1 $SP"
             mkdir -p $DIR
-            cp $I/$1 $TARGET
+            cp $S/$1 $TARGET
         fi
         ;;
     *.bz2)
         # decompress
-        TARGET=$G/${1%.bz2}
+        TARGET=$U/${1%.bz2}
         if ! test -r $TARGET; then
             check_image $1
             echo "decompress $1 $SP"
             mkdir -p $DIR
-            bzcat $I/$1 >$TARGET
+            bzcat $S/$1 >$TARGET
         fi
         ;;
     *.gz)
         # decompress
-        TARGET=$G/${1%.gz}
+        TARGET=$U/${1%.gz}
         if ! test -r $TARGET; then
             check_image $1
             echo "decompress $1 $SP"
             mkdir -p $DIR
-            zcat $I/$1 >$TARGET
+            zcat $S/$1 >$TARGET
         fi
         ;;
     *)
         # everything else is just a copy
-        TARGET=$G/$1
+        TARGET=$U/$1
         if ! test -r $TARGET; then
             check_image $1
             echo "copy $1 $SP"
             mkdir -p $DIR
-            cp $I/$1 $G/$1
+            cp $S/$1 $U/$1
         fi
         ;;
     esac
@@ -118,7 +120,7 @@ do_one_file() {
 
 do_all() {
     check_saved_images_submodule all
-    for f in $(cd $I; find * -type f); do
+    for f in $(cd $S; find * -type f); do
         do_one_file $f
     done
 }
