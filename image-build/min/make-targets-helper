@@ -1,0 +1,85 @@
+# this file is used by make-image-targets
+# do not try to run it on its own
+# use: make-image-targets dir
+# where dir is the directory this file is in
+
+# files
+VER=6.6.23
+ROOTFS_FILE=poky/core-image-base-genericarm64.rootfs.tar.gz
+MODULES_FILE=kernel/modules-${VER}.tar.gz
+KERNEL_FILE_FETCH=kernel/image-${VER}.tar.gz
+KERNEL_FILE=kernel/boot/vmlinuz-${VER}
+
+# remove any existing modules
+rm-modules() {
+    rm -rf xxx-temp/lib/modules
+}
+
+# trim the modules
+trim-modules() {
+    echo "Before:"; du -sh xxx-temp/lib/modules/*
+
+    rm -rf xxx-temp/lib/modules/*/kernel/drivers/gpu
+    rm -rf xxx-temp/lib/modules/*/kernel/drivers/media
+    rm -rf xxx-temp/lib/modules/*/kernel/sound
+
+    echo "After:"; du -sh xxx-temp/lib/modules/*
+}
+
+add-init-symlink() {
+    ln -fs /sbin/init xxx-temp/init
+}
+
+usr-merge() {
+    mkdir -p xxx-temp/usr
+
+    for d in bin sbin lib; do
+        if [ ! -h xxx-temp/$d -a -d xxx-temp/$d ]; then
+            if [ -d xxx-temp/usr/$d ]; then
+                mv xxx-temp/$d/* xxx-temp/usr/$d
+                rm -rf xxx-temp/$d
+            else
+                mv xxx-temp/$d xxx-temp/usr/$d
+            fi
+            ln -s usr/$d xxx-temp/$d
+       fi
+    done
+}
+
+main() {
+    shopt -s nullglob
+
+    BASE_DIR=$(cd ../..; pwd)
+    U=$BASE_DIR/images
+    S=$BASE_DIR/saved-images/min
+
+    FETCH=$BASE_DIR/scripts/maybe-fetch 
+
+    D=generated
+    mkdir -p $D
+    mkdir -p $S
+
+    # prefetch anything needed
+    $FETCH $MODULES_FILE
+    $FETCH $ROOTFS_FILE
+    $FETCH $KERNEL_FILE_FETCH
+
+    # hack the initrd
+    new-cpio $D/hacked.cpio.gz \
+        $U/$ROOTFS_FILE \
+        cb:add-init-symlink cb:rm-modules cb:usr-merge
+
+    # make a cpio of the modules
+    new-cpio $D/modules.cpio.gz $U/$MODULES_FILE \
+        cb:trim-modules cb:usr-merge
+
+    # add any extra stuff
+    new-cpio $D/my-extra-stuff.cpio.gz my-extra-stuff cb:usr-merge
+
+    # cpio-cat OUTPUT INPUT INPUT ...
+    cpio-cat $S/yp-${VER}-initrd.cpio.gz $D/hacked.cpio.gz \
+        $D/modules.cpio.gz $D/my-extra-stuff.cpio.gz
+
+    K=$(basename $KERNEL_FILE)
+    bzip2 -czk $U/$KERNEL_FILE >$S/$K.bz2
+}
