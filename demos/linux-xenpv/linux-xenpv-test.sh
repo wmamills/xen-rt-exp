@@ -3,7 +3,7 @@
 run_test() {
     dd if=/dev/zero of=disk0.img bs=1M count=16
     xl vcpu-list
-    xl create ./linux-domu.conf 'name="test1"'
+    xl create ./linux-xenpv.conf 'name="test1"'
     xl vcpu-list
     xl block-list test1
     xl network-list test1
@@ -18,7 +18,7 @@ case $1 in
     run_test "$@"
     ;;
 "files")
-    echo linux-domu-disk-net.conf $IMAGES/min
+    echo linux-xenpv.conf $IMAGES/min
     ;;
 *)
     echo "$0: unknown command $1"

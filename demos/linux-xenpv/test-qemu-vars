@@ -7,4 +7,4 @@ SHUTDOWN_WAIT=80
 TRY_CONTINUE=true
 FILTER_TOTALS=false
 
-TESTS=( linux-domu-disk-net  )
+TESTS=( linux-xenpv  )
