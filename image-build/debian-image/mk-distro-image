@@ -75,7 +75,21 @@ add_xen() {
 
     # install needed libs
     apt install -y libyajl2 libfdt1
-    systemctl enable xencommons
+
+    # more things need by the big qemu build as part of xen
+    # these may go away if we don't use that qemu
+    apt install -y libaio1 libpixman-1-0 libglib2.0-0
+
+    # we now have real systemd services, use them
+    systemctl enable \
+        xenstored.service \
+        xenconsoled.service \
+        xen-init-dom0.service \
+        xen-qemu-dom0-disk-backend.service \
+        xendomains.service
+
+    # note: we don't enable the xen-watchdog service, the user can do that
+    # if they wish
 
     # add a symlink to the root dir that points at the xen we want to use
     # this is similar to the /vmlinuz and /initrd.img symlinks that Debian
