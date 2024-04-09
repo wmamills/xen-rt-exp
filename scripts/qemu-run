@@ -85,7 +85,7 @@ case $1 in
     exit 0
     ;;
 
-""|"u-boot")
+"tfa-u-boot"|"tfa-uboot")
     # can't handle gicv3
     U_BOOT=qemu-firmware/arm64-tfa-optee-uboot.bin
     fetch-qemu
@@ -93,6 +93,20 @@ case $1 in
     $FETCH ${HD}.bz2
     $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,secure=on,gic_version=2 \
+        -device virtio-blk-device,drive=hd \
+        -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
+        -bios ${G}/$U_BOOT
+    ;;
+
+# u-boot at EL2 (no TFA at EL3, no OP-TEE at S-EL1)
+"u-boot"|"uboot")
+    # can't handle gicv3
+    U_BOOT=qemu-firmware/arm64-u-boot.bin
+    fetch-qemu
+    $FETCH ${U_BOOT}.bz2
+    $FETCH ${HD}.bz2
+    $QEMU_BIN $QEMU_BASE \
+        -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
         -bios ${G}/$U_BOOT
