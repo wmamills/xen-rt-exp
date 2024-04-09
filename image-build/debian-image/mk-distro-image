@@ -1,17 +1,31 @@
 #!/bin/bash
 
 ME=$0
+ME_FULL=$(readlink -f $0)
 MY_NAME=$(basename $0)
-MY_DIR=$(dirname $0)
-MY_SUBDIR=$(basename $MY_DIR)
-BASE_DIR=$(cd $MY_DIR/..; pwd)
+MY_DIR=$(dirname $ME_FULL)
+BASE_DIR=$(cd $MY_DIR/../..; pwd)
+MY_SUBDIR=${MY_DIR#$BASE_DIR/}
 
 ARCH=arm64
 DISTRO=debian:12
-BUILD_DIR=debian-image/generated
+BUILD_DIR=$MY_SUBDIR/generated
 IMAGE_SUB_DIR=debian-12-arm64
-IMAGES=images/$IMAGE_SUB_DIR
-SAVED_IMAGES=saved-images/$IMAGE_SUB_DIR
+IMAGES=$BASE_DIR/images/$IMAGE_SUB_DIR
+SAVED_IMAGES=$BASE_DIR/saved-images/$IMAGE_SUB_DIR
+
+dbg_vars() {
+    echo "ME=$ME"
+    echo "MY_NAME=$MY_NAME"
+    echo "MY_DIR=$MY_DIR"
+    echo "BASE_DIR=$BASE_DIR"
+    echo "MY_SUBDIR=$MY_SUBDIR"
+    echo "BUILD_DIR=$BUILD_DIR"
+    echo "IMAGE_SUB_DIR=$IMAGE_SUB_DIR"
+    echo "IMAGES=$IMAGES"
+    echo "SAVED_IMAGES=$SAVED_IMAGES"
+}
+#dbg_vars
 
 XEN_DEB=xen/xen-upstream-4.19-unstable.deb
 
@@ -152,7 +166,7 @@ do_rootfs() {
     fi
 
     # make sure we are in the project root
-    cd $MY_DIR/..
+    cd $BASE_DIR
 
     # get any image assets we need
     ./scripts/maybe-fetch $XEN_DEB

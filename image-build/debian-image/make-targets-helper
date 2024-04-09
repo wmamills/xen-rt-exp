@@ -8,10 +8,10 @@
 
 main() {
     D=generated
-    I=../images/debian-12-arm64
+    I=../../images/debian-12-arm64
     mkdir -p $D
     mkdir -p $D/efi
-    echo "This is a blank EFI partition" >$D/efi/README.txt
+    echo "This is a blank EFI partition" >$D/efi/README-blank.txt
 
     new-vfat $D/boot.efi     250M EFI  $D/efi
     new-ext4 $D/rootfs.ext4 2700M root $D/rootfs.tar.gz
