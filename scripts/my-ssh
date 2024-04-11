@@ -16,18 +16,23 @@ case $1 in
     ;;
 esac
 
+#echo "$0" "$@"
+
 if [ $PWD != $BASE_DIR -a $REAL_UTIL = "scp" ]; then
-    echo "error: my-scp only works from the $BASE_DIR directory"
+    echo "error: my-scp only works from the base directory"
+    echo "  BASE_DIR=$BASE_DIR"
+    echo "  PWD=$PWD"
     exit 2
 fi
 
-# just do this everytime in case the dir moves
+# just do this every time in case the dir moves
 cat >$BASE_DIR/ssh/config <<EOF
 Include $BASE_DIR/ssh/config.d/*
 Include ~/.ssh/config
 EOF
 
-chmod go-rw $BASE_DIR/ssh/dummy-key*
+# this is needed on a fresh git clone
+chmod go-rwx $BASE_DIR/ssh/dummy-key*
 
 cd $BASE_DIR
 $REAL_UTIL -F ./ssh/config "$@"
