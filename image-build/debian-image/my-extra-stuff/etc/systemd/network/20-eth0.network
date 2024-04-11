@@ -1,0 +1,8 @@
+# When we use mmio for network it shows up as eth0
+# I expect either eth0 or enp0s1, I don't know what happens if we have both
+
+[Match]
+Name=eth0
+
+[Network]
+Bridge=xenbr0

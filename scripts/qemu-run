@@ -47,7 +47,7 @@ QEMU_BASE="-machine type=virt \
            -cpu cortex-a57 \
            -smp 8 \
            -accel tcg \
-           -device virtio-net-pci,netdev=unet \
+           -device virtio-net-device,netdev=unet \
            -netdev user,id=unet,hostfwd=tcp::2222-:22 \
            -serial mon:stdio \
            -monitor tcp::2220,server=on,wait=off \
