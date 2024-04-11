@@ -59,6 +59,9 @@ QEMU_BOOT_SCRIPT="scripts/qemu-run"
 QEMU_BOOT_ARG="xen"
 SESSION_NAME=test-qemu
 
+SSH=$BASE_DIR/scripts/my-ssh
+SCP=$BASE_DIR/scripts/my-scp
+
 error() {
     echo "$@"
     exit 2
@@ -127,7 +130,7 @@ wait_for_ssh() {
     start_timer
     echo -n "waiting for ssh "
     for i in $(seq 1 $BOOT_WAIT); do
-        if ssh -o ConnectTimeout=2 $QEMU_SSH_NAME true >/dev/null 2>&1; then
+        if $SSH -o ConnectTimeout=2 $QEMU_SSH_NAME true >/dev/null 2>&1; then
             DELAY=$(get_timer)
             echo " OK"
             return
@@ -144,9 +147,9 @@ wait_for_ssh() {
 
 # we are on the host, perform a subcmd on the target
 remote_action() {
-    scp -q $ME $QEMU_SSH_NAME:
-    ssh $QEMU_SSH_NAME chmod +x ./$MY_NAME
-    ssh $QEMU_SSH_NAME ./$MY_NAME subcmd "$@"
+    $SCP -q $ME $QEMU_SSH_NAME:
+    $SSH $QEMU_SSH_NAME chmod +x ./$MY_NAME
+    $SSH $QEMU_SSH_NAME ./$MY_NAME subcmd "$@"
 }
 
 # we are on the target, start an detached action
@@ -201,7 +204,7 @@ check_ssh() {
     echo -n "checking ssh "
     start_timer
     for i in $(seq 1 $1); do
-        if scp -o ConnectTimeout=2 \
+        if $SCP -o ConnectTimeout=2 \
             -o ServerAliveInterval=2 \
             -o ServerAliveCountMax=2 \
             $QEMU_SSH_NAME:test-result.* $LOGS/. >/dev/null 2>&1; then
@@ -298,14 +301,14 @@ sync_files() {
         return 1
     fi
 
-    ssh $QEMU_SSH_NAME stat -c "'%f %s %Y %n'" $REMOTE_FILES \
+    $SSH $QEMU_SSH_NAME stat -c "'%f %s %Y %n'" $REMOTE_FILES \
         >$LOGS/remote-stats 2>$LOGS/remote-stats.stderr
     for f in $LOCAL_FILES; do
         f_n=$(basename $f)
         f_d=$(dirname $f)
         LOCAL_FILE_STAT=$(cd $f_d; stat -c '%f %s %Y %n' $f_n)
         if ! grep -q "$LOCAL_FILE_STAT" $LOGS/remote-stats; then
-            scp -p $f $QEMU_SSH_NAME:
+            $SCP -p $f $QEMU_SSH_NAME:
         fi
     done
 }
@@ -336,14 +339,14 @@ do_one_deferred_test() {
         fi
     fi
     rm -rf $LOGS/test-result.*
-    scp -q $1-test.sh $QEMU_SSH_NAME:
+    $SCP -q $1-test.sh $QEMU_SSH_NAME:
     remote_action defer_start defer_test_run "$@"
     check_ssh $TEST_WAIT $SSH_FAIL_COUNT
 }
 
 do_one_quick_test() {
     echo "ssh command"
-    ssh $QEMU_SSH_NAME true
+    $SSH $QEMU_SSH_NAME true
 }
 
 do_one_test() {
