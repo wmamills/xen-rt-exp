@@ -16,6 +16,7 @@ FETCH=$BASE_DIR/scripts/maybe-fetch
 
 # provide defaults if not overridden by ENV vars
 : ${QEMU_DIR:=$DEF_QEMU_DIR}
+: ${TMPDIR:=/tmp/qemu-run-$$}
 
 # short cut names for some common things
 G=$BASE_DIR/images
@@ -43,12 +44,23 @@ else
     EDK_FILE=$QEMU_DIR/share/qemu/edk2-aarch64-code.fd
 fi
 
+if [ x"$TFTPDIR" = x"" ]; then
+    if [ -d tftp ]; then
+        TFTPDIR=$PWD/tftp
+    else
+        mkdir -p $TMPDIR/tftp
+        TFTPDIR=$TMPDIR/tftp
+    fi
+else
+    mkdir -p $TFTPDIR;
+fi
+
 QEMU_BASE="-machine type=virt \
            -cpu cortex-a57 \
            -smp 8 \
            -accel tcg \
            -device virtio-net-device,netdev=unet \
-           -netdev user,id=unet,hostfwd=tcp::2222-:22 \
+           -netdev user,id=unet,hostfwd=tcp::2222-:22,tftp=$TFTPDIR \
            -serial mon:stdio \
            -monitor tcp::2220,server=on,wait=off \
            -gdb tcp::2221,server=on,wait=off \
