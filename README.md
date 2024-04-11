@@ -18,7 +18,7 @@ adjusted.
 
 Install the following packages
 ```
-sudo apt install -y --no-install-recommends git git-lfs bzip2
+sudo apt install git git-lfs bzip2
 ```
 
 If you do not have swtpm-tools (like Ubuntu 20.04) just drop it and don't run the "trs" qemu target.
@@ -47,7 +47,7 @@ From another terminal on the host, use
 ./scripts/my-scp demos/zephyr-hello/* images/zephyr-apps/* qemu:
 ```
 
-You can now on the target systems, log in as root with no password and do these commands:
+Now on the target systems, log in as root with no password and do these commands:
 ```
 xl list
 xl vcpu-list
@@ -85,10 +85,16 @@ again by decompressing the template file in saved-images.  A new download
 will not be required.
 
 Note:
+
 Additional packages are required to run the TRS target but that target is
-not needed for this demo.
+not needed for this demo.  The required packages are all available in
+ubuntu 22.04 but not Ubuntu 20.04.
+
+Note also that TRS takes a very long time to boot the first time.  It encrypts
+the rootfs to the specific simulated TPM on first boot.  It then reboots.
+
 The additional packages are:
 ```
-sudo apt install -y --no-install-recommends qemu-system-arm \
+sudo apt install --no-install-recommends qemu-system-arm \
     qemu-efi-aarch64 swtpm-tools ipxe-qemu
 ```
