@@ -18,8 +18,7 @@ adjusted.
 
 Install the following packages
 ```
-sudo apt install -y --no-install-recommends git git-lfs qemu-system-arm \
-    qemu-efi-aarch64 bzip2 swtpm-tools ipxe-qemu
+sudo apt install -y --no-install-recommends git git-lfs bzip2
 ```
 
 If you do not have swtpm-tools (like Ubuntu 20.04) just drop it and don't run the "trs" qemu target.
@@ -32,7 +31,7 @@ cd xen-rt-exp
 
 Now you can run the demo using this command:
 ```
-./qemu-run xen
+./scripts/qemu-run xen
 ```
 
 The first time you run it, it will pull the images you need and decompress them.
@@ -41,13 +40,14 @@ This only happens the first time you use a given qemu model.
 
 QEMU will now be running Xen and a Linux DOM0.
 
-You will need some files on the target. Use
+You will need some files on the target.
+From another terminal on the host, use
 ```
-./scripts/maybe-fetch min
-./scripts/my-scp demos/zephyr-hello/* images/min/* qemu:
+./scripts/maybe-fetch zephyr-apps
+./scripts/my-scp demos/zephyr-hello/* images/zephyr-apps/* qemu:
 ```
 
-You can now log in as root with no password and do these commands:
+You can now on the target systems, log in as root with no password and do these commands:
 ```
 xl list
 xl vcpu-list
@@ -83,3 +83,12 @@ If the hard disk image is ever messed up, just delete the
 file images/debian-12-arm64/hd.img.  It will be recreated when you need it
 again by decompressing the template file in saved-images.  A new download
 will not be required.
+
+Note:
+Additional packages are required to run the TRS target but that target is
+not needed for this demo.
+The additional packages are:
+```
+sudo apt install -y --no-install-recommends qemu-system-arm \
+    qemu-efi-aarch64 swtpm-tools ipxe-qemu
+```

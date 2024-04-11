@@ -27,5 +27,7 @@ Include $BASE_DIR/ssh/config.d/*
 Include ~/.ssh/config
 EOF
 
+chmod go-rw $BASE_DIR/ssh/dummy-key*
+
 cd $BASE_DIR
 $REAL_UTIL -F ./ssh/config "$@"
