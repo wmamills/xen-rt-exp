@@ -50,8 +50,6 @@ TEST_WAIT=60
 SSH_FAIL_COUNT=5
 TRY_CONTINUE=true
 
-TESTS=( )
-
 FILTER_TOTALS=true
 
 QEMU_SSH_NAME=qemu
@@ -59,31 +57,32 @@ QEMU_BOOT_SCRIPT="scripts/qemu-run"
 QEMU_BOOT_ARG="xen"
 SESSION_NAME=test-qemu
 
-SSH=local-ssh
-SCP=local-scp
+SSH=local_ssh
+SCP=local_scp
 
 error() {
     echo "$@"
     exit 2
 }
 
-local-ssh() {
+local_ssh() {
     (cd $BASE_DIR; ./scripts/my-ssh "$@")
 }
 
 # this is OK because we have already made sure all local files are absolute
-local-scp() {
+local_scp() {
     (cd $BASE_DIR; ./scripts/my-scp "$@")
 }
 
-tmux-panel-title() {
-    printf '\033]2;%s\033\\' "$1"
+tmux_panel_title() {
+    TITLE="$@ "
+    printf '\033]2;%s\033\\' "$TITLE"
 }
 
 format_msg() {
     MSG1=$(printf "%-8s %4d %-8s %s" $1 $2 $3 $4)
     shift 4
-    echo "$MSG1 $@"
+    echo "$MSG1" "$@"
 }
 
 update_totals() {
@@ -174,11 +173,11 @@ do_defer_start() {
         true
         ;;
     *)
-        echo "start $@"
+        echo "start" "$@"
         ;;
     esac
     rm -rf test-result.*
-    echo "$ME subcmd $@" | at now + 0 minute  >test-result.start 2>&1
+    echo "$ME" "subcmd" "$@" | at now + 0 minute  >test-result.start 2>&1
 }
 
 # we are on the target, this is the action for a deferred test run
@@ -360,7 +359,7 @@ do_one_quick_test() {
 }
 
 do_one_test() {
-    do_one_deferred_test $@
+    do_one_deferred_test "$@"
 }
 
 ###### Shutdown support
@@ -429,7 +428,7 @@ kill_qemu() {
 
 ###### Windows and main
 do_totals() {
-    tmux-panel-title "totals"
+    tmux_panel_title "totals"
     watch -t -n 1 -d cat $TOTALS
 }
 
@@ -445,10 +444,10 @@ clean_tmp() {
 }
 
 do_host() {
-    tmux-panel-title "host side $@"
+    tmux_panel_title "host side" "$@"
     init_totals
     echo "# LOG=$LOG"
-    echo "# RUNS=$RUNS TRYS=$TRYS TESTS=${TESTS[@]}" | tee -a $LOG
+    echo "# RUNS=$RUNS TRYS=$TRYS TESTS=" "${TESTS[@]}" | tee -a $LOG
     echo "#"                                    >>$LOG
     echo "# QEMU_DIR=$QEMU_DIR"                 >>$LOG
     echo "# QEMU_BOOT_SCRIPT=$QEMU_BOOT_SCRIPT" >>$LOG
@@ -461,15 +460,15 @@ do_host() {
     echo "# TRY_CONTINUE=$TRY_CONTINUE"         >>$LOG
 
     for run in $(seq 1 $RUNS); do
-        for t in ${TESTS[@]}; do
-            tmux-panel-title "run=$run test=$t boot"
+        for t in "${TESTS[@]}"; do
+            tmux_panel_title "run=$run test=$t boot"
             tmux split-window -h "$ME subcmd qemu $t"
             if wait_for_ssh $BOOT_WAIT; then
                 record_success OK $run BOOT 0 "($DELAY Sec)"
                 status=true
                 try_shutdown=true
                 for try in $(seq 1 $TRYS); do
-                    tmux-panel-title "run=$run test=$t try=$try"
+                    tmux_panel_title "run=$run test=$t try=$try"
                     if ! do_one_test $t; then
                         record_failure $CAUSE $run $t $try "($DELAY Sec)"
                         status=false
@@ -514,7 +513,7 @@ do_host() {
 
 # This is the tmux window pane function to actually run qemu
 do_qemu() {
-    tmux-panel-title "$QEMU_BOOT_SCRIPT $QEMU_BOOT_ARG $@"
+    tmux_panel_title "$QEMU_BOOT_SCRIPT" "$QEMU_BOOT_ARG" "$@"
     QEMU_TMUX=no $BASE_DIR/$QEMU_BOOT_SCRIPT $QEMU_BOOT_ARG "$@"
 }
 
@@ -540,6 +539,8 @@ EOF
 
 # main starts things up and then waits for tmux to finish or detach
 main() {
+    TESTS=( )
+
     if [ -n "$TMUX" ]; then
         echo "nested tmux not supported"
         exit 2
