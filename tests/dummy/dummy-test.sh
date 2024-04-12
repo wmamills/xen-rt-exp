@@ -28,7 +28,7 @@ case $1 in
     run_test "$@"
     ;;
 "files")
-    echo "dummy-file $IMAGES/zephyr-apps/*"
+    echo "dummy-file $IMAGES/zephyr-apps"
     ;;
 *)
     echo "unknown command $1"
