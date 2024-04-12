@@ -1,0 +1,5 @@
+# env overrides and additions to force tftp to be first and only boot mode
+
+bootdelay=4
+preboot=echo About to TFTP boot ...
+boot_targets=dhcp

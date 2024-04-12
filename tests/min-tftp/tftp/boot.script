@@ -1,0 +1,31 @@
+# DHCP/TFTP boot script for qemu arm64
+
+echo "TFTP boot of minimal Linux"
+sleep 1
+
+setenv bootargs ABC=123
+
+setenv prefix ""
+
+# DTB choice, None == use dtb from boot firmware
+dtb_name=None
+
+kernel_name=Image
+ramdisk_name=initrd.img
+
+tftpboot $kernel_addr_r  ${prefix}${kernel_name}
+
+if tftpboot $fdt_addr_r  ${prefix2}${dtb_name}; then
+    echo "good DTB"
+    setenv active_dtb $fdt_addr_r
+else
+    setenv active_dtb $fdtcontroladdr
+fi
+
+tftpboot $ramdisk_addr_r ${prefix2}${ramdisk_name}
+
+booti $kernel_addr_r $ramdisk_addr_r:$filesize $active_dtb
+
+echo "it did not work, trying next boot target"
+sleep 3
+

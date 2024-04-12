@@ -17,6 +17,8 @@ FETCH=$BASE_DIR/scripts/maybe-fetch
 # provide defaults if not overridden by ENV vars
 : ${QEMU_DIR:=$DEF_QEMU_DIR}
 : ${TMPDIR:=/tmp/qemu-run-$$}
+: ${FLASH_CODE_RO:=on}
+: ${FLASH_VARS_RO:=on}
 
 # short cut names for some common things
 G=$BASE_DIR/images
@@ -53,6 +55,15 @@ if [ x"$TFTPDIR" = x"" ]; then
     fi
 else
     mkdir -p $TFTPDIR;
+fi
+
+# if we have a TFTP boot script
+if [ $TFTPDIR/boot.script ]; then
+    # update the u-boot image version if needed
+    if [ ! -r $TFTPDIR/boot.scr.uimg -o \
+        $TFTPDIR/boot.script -nt $TFTPDIR/boot.scr.uimg ]; then
+        mkimage -T script -d $TFTPDIR/boot.script $TFTPDIR/boot.scr.uimg
+    fi
 fi
 
 QEMU_BASE="-machine type=virt \
@@ -111,17 +122,26 @@ case $1 in
     ;;
 
 # u-boot at EL2 (no TFA at EL3, no OP-TEE at S-EL1)
-"u-boot"|"uboot")
-    # can't handle gicv3
+"u-boot"|"uboot"|"u-boot-tftp"|"uboot-tftp")
     U_BOOT=qemu-firmware/arm64-u-boot.bin
+    case $1 in
+    *-tftp)
+        U_BOOT_VARS=qemu-firmware/arm64-u-boot-vars-tftp.bin
+        ;;
+    *)
+        U_BOOT_VARS=qemu-firmware/arm64-u-boot-vars-blank.bin
+        ;;
+    esac
     fetch-qemu
     $FETCH ${U_BOOT}.bz2
+    $FETCH ${U_BOOT_VARS}.bz2
     $FETCH ${HD}.bz2
     $QEMU_BIN $QEMU_BASE \
         -machine type=virt,virtualization=on,gic_version=3 \
         -device virtio-blk-device,drive=hd \
         -blockdev driver=raw,node-name=hd,file.driver=file,file.filename=${G}/${HD} \
-        -bios ${G}/$U_BOOT
+        -drive if=pflash,unit=0,readonly=${FLASH_CODE_RO},file=${G}/${U_BOOT},format=raw \
+        -drive if=pflash,unit=1,readonly=${FLASH_VARS_RO},file=${G}/${U_BOOT_VARS},format=raw
     ;;
 
 "edk2")
