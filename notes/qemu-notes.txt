@@ -21,18 +21,16 @@ platform        0000_0000__0000_0000        0C00_0000__1FFF_FFFF    ???
       mmio1     0000_0000__0A00_0200        0000_0000__0A00_03FF    512 bytes
       ...
       mmio31    0000_0000__0A00_3E00        0000_0000__0A00_3FFF    512 bytes
+
+    Secure mem  0000_0000__0E00_0000        0000_0000__0EFF_FFFF    16MB
     Memory      0000_0000__4000_0000        0000_0002__3FFF_FFFF    8GB
-      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
     PCIe        0000_0040__1000_0000        0000_0040__1FFF_FFFF    512MB
 
 For -m 2048
     Memory      0000_0000__4000_0000        0000_0002__BFFF_FFFF    2GB
-      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
 
 For -m 3072
     Memory      0000_0000__4000_0000        0000_0000__FFFF_FFFF    3GB
-      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
 
 For -m 3080M
     Memory      0000_0000__4000_0000        0000_0001__007F_FFFF    3GB+8M
-      sec mem   0000_0000__E000_0000        0000_0000__EFFF_FFFF    256MB
