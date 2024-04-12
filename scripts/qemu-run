@@ -19,11 +19,14 @@ FETCH=$BASE_DIR/scripts/maybe-fetch
 : ${TMPDIR:=/tmp/qemu-run-$$}
 : ${FLASH_CODE_RO:=on}
 : ${FLASH_VARS_RO:=on}
+: ${QEMU_IMAGE_SET:=debian-12-arm64}
+: ${QEMU_HD:=${QEMU_IMAGE_SET}/hd.img}
+: ${QEMU_DB:=${QEMU_IMAGE_SET}/boot}
 
 # short cut names for some common things
 G=$BASE_DIR/images
-HD=debian-12-arm64/hd.img
-DB=debian-12-arm64/boot
+HD=$QEMU_HD
+DB=$QEMU_DB
 DBK=$G/$DB/vmlinuz
 DBI=$G/$DB/initrd.img
 DBX=$G/$DB/xen
