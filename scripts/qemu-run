@@ -161,7 +161,7 @@ case $1 in
 "ts")
     # Use trusted-substrate with debian
     # Won't boot as debian default boot file is not signed
-    IMAGE_NAME=trs/trs-image-trs-qemuarm64.rootfs.wic
+    # can't handle gicv3 nor memory > 3072
     FLASH_NAME=trs/flash.bin-qemu
     fetch-qemu
     $FETCH ${HD}.bz2
