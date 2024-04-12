@@ -1,3 +1,6 @@
-old/
-images/
-logs/
+/old/
+/images/
+/logs/
+generated/
+boot.scr.uimg
+
