@@ -403,10 +403,16 @@ do_shutdown() {
 }
 
 kill_qemu() {
+    # there is a 2 second delay in qemu-run on error exit
+    # after we know qemu is dead, we must wait longer than this
+    # we could also poll for the existence of the qemu window do this for now
+
+    #echo "kill_qemu, hit enter to continue"; read ignore
     if [ -r $PID_FILE ]; then
         PID=$(cat $PID_FILE)
     else
-        return
+        sleep 3
+        return 0
     fi
 
     for i in $(seq 1 $KILL_WAIT); do
@@ -414,6 +420,7 @@ kill_qemu() {
             kill -3 $PID
             sleep 1
         else
+            sleep 3
             return 0
         fi
     done
