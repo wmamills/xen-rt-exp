@@ -7,3 +7,6 @@
 [submodule "saved-images"]
 	path = saved-images
 	url = https://github.com/wmamills/xen-rt-exp-images.git
+[submodule "xen-imagebuilder"]
+	path = xen-imagebuilder
+	url = https://gitlab.com/xen-project/imagebuilder.git
