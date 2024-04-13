@@ -69,6 +69,9 @@ if [ -r $TFTPDIR/boot.script ]; then
     fi
 fi
 
+# example use of QEMU_EXTRA_ARGS
+# QEMU_EXTRA_ARGS="-machine dumpdtb=virt.dtb" ./scripts/qemu-run u-boot-tftp
+
 QEMU_BASE="-machine type=virt \
            -cpu cortex-a57 \
            -smp 8 \
@@ -80,7 +83,9 @@ QEMU_BASE="-machine type=virt \
            -gdb tcp::2221,server=on,wait=off \
            -pidfile $PID_FILE \
            -m 8192 \
-           -nographic"
+           -nographic \
+           ${QEMU_EXTRA_ARGS}
+           "
 
 # U-boot can't handle virtio-scsi ATM so use virtio-blk (and /dev/vda)
 # but for now leave the choice to the specific case
