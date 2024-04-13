@@ -18,7 +18,7 @@ adjusted.
 
 Install the following packages
 ```
-sudo apt install git git-lfs bzip2
+sudo apt install git git-lfs bzip2 zstd
 ```
 
 If you do not have swtpm-tools (like Ubuntu 20.04) just drop it and don't run the "trs" qemu target.

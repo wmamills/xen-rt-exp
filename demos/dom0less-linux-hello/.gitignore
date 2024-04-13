@@ -1,0 +1,4 @@
+tftp/virt.dtb
+tftp/dom*/*.cpio
+tftp/boot.script
+tftp/boot.scr.uimg

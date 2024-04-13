@@ -1,0 +1,34 @@
+# virt machine memory DDR starts at 0x4000_0000
+# assume we have at least 2G of memory so end would be 0xC000_0000
+# assume we can use memory for loading starting at kernel load address
+MEMORY_START="0x40400000"
+MEMORY_END="0xc0000000"
+LOAD_CMD="tftpboot"
+BOOT_CMD="booti"
+
+DEVICE_TREE="virt.dtb"
+XEN="xen"
+XEN_CMD="dom0_mem=1G,max:1G dom0_max_vcpus=2 dom0_vcpus_pin=true bootscrub=0 sched=null loglvl=all guest_loglvl=all console_to_ring=true"
+
+# Note: ImageBuilder script only accepts *.cpio and that can't be compressed
+
+DOM0_KERNEL="dom0/vmlinuz"
+DOM0_RAMDISK="dom0/initrd.cpio"
+DOM0_CMD="console=hvc0 earlyprintk=xen root=/dev/vda2"
+
+NUM_DOMUS=2
+
+DOMU_KERNEL[0]="dom1/vmlinuz"
+DOMU_RAMDISK[0]="dom1/initrd.cpio"
+DOMU_CMD[0]="console=hvc0 earlycon=xen"
+DOMU_MEM[0]=512
+DOMU_VCPUS[0]=1
+
+DOMU_KERNEL[1]="dom2/vmlinuz"
+DOMU_RAMDISK[1]="dom1/initrd.cpio"
+DOMU_CMD[1]="console=hvc0 earlycon=xen"
+DOMU_MEM[1]=512
+DOMU_VCPUS[1]=1
+
+UBOOT_SOURCE="boot.script"
+UBOOT_SCRIPT="boot.scr.uimg"
