@@ -61,7 +61,7 @@ else
 fi
 
 # if we have a TFTP boot script
-if [ $TFTPDIR/boot.script ]; then
+if [ -r $TFTPDIR/boot.script ]; then
     # update the u-boot image version if needed
     if [ ! -r $TFTPDIR/boot.scr.uimg -o \
         $TFTPDIR/boot.script -nt $TFTPDIR/boot.scr.uimg ]; then
