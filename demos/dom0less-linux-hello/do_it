@@ -10,6 +10,7 @@ do_script() {
     # prefetch the symlink targets
     $BASE_DIR/scripts/maybe-fetch min
     $BASE_DIR/scripts/maybe-fetch debian-12-arm64
+    $BASE_DIR/scripts/maybe-fetch zephyr-apps
 
     # For some reason ImageBuiler wants only uncompressed cpio files
     for i in tftp/dom{0,1,2}/initrd.cpio; do

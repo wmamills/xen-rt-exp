@@ -24,10 +24,9 @@ DOMU_CMD[0]="console=hvc0 earlycon=xen"
 DOMU_MEM[0]=512
 DOMU_VCPUS[0]=1
 
-DOMU_KERNEL[1]="dom2/vmlinuz"
-DOMU_RAMDISK[1]="dom1/initrd.cpio"
-DOMU_CMD[1]="console=hvc0 earlycon=xen"
-DOMU_MEM[1]=512
+DOMU_KERNEL[1]="dom2/zephyr.bin"
+DOMU_CMD[1]="hello abc=123"
+DOMU_MEM[1]=16
 DOMU_VCPUS[1]=1
 
 UBOOT_SOURCE="boot.script"
