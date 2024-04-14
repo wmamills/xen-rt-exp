@@ -7,6 +7,13 @@ BASE_DIR=$(cd $MY_DIR/../..; pwd)
 cd $MY_DIR
 
 do_script() {
+    # make sure submodule is init'ed
+    if [ ! -e $BASE_DIR/xen-imagebuilder/README.md ]; then
+        ( cd $BASE_DIR;
+        git submodule init xen-imagebuilder;
+        git submodule update xen-imagebuilder )
+    fi
+
     # prefetch the symlink targets
     $BASE_DIR/scripts/maybe-fetch min
     $BASE_DIR/scripts/maybe-fetch debian-12-arm64
