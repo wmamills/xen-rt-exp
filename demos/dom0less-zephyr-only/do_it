@@ -16,7 +16,7 @@ do_script() {
 
     # prefetch the symlink targets
     $BASE_DIR/scripts/maybe-fetch zephyr-apps
-    $BASE_DIR/scripts/maybe-fetch debian-12-arm64
+    $BASE_DIR/scripts/maybe-fetch debian-12-arm64/boot.tar.gz
 
     # For some reason ImageBuiler wants only uncompressed cpio files
     for i in tftp/dom{0,1,2}/initrd.cpio; do
@@ -41,6 +41,9 @@ do_script() {
 do_run() {
     $BASE_DIR/scripts/qemu-run u-boot-tftp
 }
+
+# we don't need the big debian disk image for this demo
+export QEMU_HD=blank/hd-256M.img
 
 case $1 in
 run|script)
