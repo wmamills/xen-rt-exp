@@ -1,14 +1,16 @@
 #!/bin/bash
 
 ME=$0
-MY_DIR=$(dirname $ME)
+ME_FULL=$(readlink -f $0)
+MY_DIR=$(dirname $ME_FULL)
 BASE_DIR=$(dirname $MY_DIR)
+ORIG_PWD=$PWD
 
 # short cut names for some common things
 # S = saved images (aka templates)
 # U = in use images
-U=$BASE_DIR/images
-S=$BASE_DIR/saved-images
+U=images
+S=saved-images
 MARKER=debian-12-arm64/boot.tar.gz
 
 check_saved_images_submodule() {
@@ -181,6 +183,7 @@ do_all() {
     done
 }
 
+cd $BASE_DIR
 case $1 in
 all)
     do_all
