@@ -21,8 +21,6 @@ Install the following packages
 sudo apt install git git-lfs bzip2 zstd u-boot-tools
 ```
 
-If you do not have swtpm-tools (like Ubuntu 20.04) just drop it and don't run the "trs" qemu target.
-
 Next clone the repo:
 ```
 git clone https://github.com/wmamills/xen-rt-exp.git
@@ -88,7 +86,7 @@ Note:
 
 Additional packages are required to run the TRS target but that target is
 not needed for this demo.  The required packages are all available in
-ubuntu 22.04 but not Ubuntu 20.04.
+Ubuntu 22.04 but not Ubuntu 20.04.
 
 Note also that TRS takes a very long time to boot the first time.  It encrypts
 the rootfs to the specific simulated TPM on first boot.  It then reboots.

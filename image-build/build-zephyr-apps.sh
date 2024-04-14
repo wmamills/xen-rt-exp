@@ -28,7 +28,7 @@ if [ -z "$ZEPHYR_BASE" ]; then
         echo "west clone.  Either way ./zephyr-top/zephyr/zephyr-env.sh"
         echo "should exist."
         echo ""
-        echo "Your machine should be setup of building zephyr as well."
+        echo "Your machine should be setup for building zephyr as well."
         echo "Required packages, west and sdk installed etc"
         exit 2
     fi
