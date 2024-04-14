@@ -35,7 +35,7 @@ Now you can run the demo using this command:
 ```
 
 The first time you run it, it will pull the images you need and decompress them.
-It will take some time depending on you internet connection.
+It will take some time depending on your internet connection.
 This only happens the first time you use a given qemu model.
 
 QEMU will now be running Xen and a Linux DOM0.
