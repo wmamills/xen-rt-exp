@@ -1,0 +1,50 @@
+#!/bin/bash
+
+MY_DIR=$(dirname $0)
+ORIG_PWD=$PWD
+BASE_DIR=$(cd $MY_DIR/../..; pwd)
+
+cd $MY_DIR
+
+do_script() {
+    # prefetch the symlink targets
+    $BASE_DIR/scripts/maybe-fetch zephyr-apps
+    $BASE_DIR/scripts/maybe-fetch debian-12-arm64
+
+    # For some reason ImageBuiler wants only uncompressed cpio files
+    for i in tftp/dom{0,1,2}/initrd.cpio; do
+        if [ ! -r $i ]; then
+            if [ -r $i.gz ]; then
+                zcat $i.gz >$i
+            elif [ -r $i.zstd ]; then
+                zstdcat $i.zstd >$i
+            fi
+        fi
+    done
+
+    # get the DTB for the machine we are about to run
+    QEMU_EXTRA_ARGS="-machine dumpdtb=tftp/virt.dtb" \
+        $BASE_DIR/scripts/qemu-run u-boot-tftp
+
+    # now run the xen imagebuilder
+    $BASE_DIR/xen-imagebuilder/scripts/uboot-script-gen \
+        -c xen-imagebuilder-config -d tftp
+}
+
+do_run() {
+    $BASE_DIR/scripts/qemu-run u-boot-tftp
+}
+
+case $1 in
+run|script)
+    do_$1
+    ;;
+all|"")
+    do_script
+    do_run
+    ;;
+*)
+    echo "$0: don't understand arg $1"
+    exit 2
+    ;;
+esac
