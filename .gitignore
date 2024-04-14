@@ -3,4 +3,5 @@
 /logs/
 generated/
 boot.scr.uimg
+zephyr-top
 
