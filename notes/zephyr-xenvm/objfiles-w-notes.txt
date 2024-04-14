@@ -1,0 +1,147 @@
+## ARCH/ARM64
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/mmu.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/isr_wrapper.S.obj
+Wrapper for all interrupts
+    saves & restores regs, reads GIC to find ISR number,
+    does tracing, updates nesting count,
+    switches to ISR stack, calls thread switch if needed
+
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/vector_table.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/header.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/reset.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/irq_manage.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/mmu.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/cpu_idle.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/smccc-call.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/fatal.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/prep_c.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/reset.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/irq_init.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/fpu.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/tls.c.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/fpu.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/xen/enlighten.c.obj
+Gets Xen to share its info page for this DOM id.
+  Uses a static array to hold space for the page.
+  var HYPERVISOR_shred_info will point to this after it is mapped.  NULL before.
+Initializes xen events
+This init function is called at PRE_KERNEL_1 level
+
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/xen/hypercall.S.obj
+define C to HVC thunks for console_io, grant_table_op, sched_op,
+    event_channel_op, hvm_op, and memory_op
+Also defines domctl if CONFIG_XEN_DOM0 is enabled (not for this app)
+
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/switch.S.obj
+./zephyr/arch/arch/arm64/core/CMakeFiles/arch__arm64__core.dir/thread.c.obj
+
+## ARCH/COMMON
+./zephyr/arch/common/CMakeFiles/arch__common.dir/dynamic_isr.c.obj
+support install IRQ routines at runtime
+
+./zephyr/arch/common/CMakeFiles/arch__common.dir/shared_irq.c.obj
+Support for multiple hanlders for a given IRQ id.
+Modifies dynamic install by placing itself in between.
+Handles dynamic uninstall also
+
+./zephyr/arch/common/CMakeFiles/arch__common.dir/sw_isr_common.c.obj
+weak default implementation to get table index from IRQ id.
+1:1 map with limit check and compile time offset to skip first N IRQ ids.
+
+./zephyr/arch/common/CMakeFiles/isr_tables.dir/isr_tables.c.obj
+Table that maps IRQ ID to handler & arg
+Support for link time magic to generate the table
+
+
+## LIBC
+./zephyr/lib/libc/picolibc/CMakeFiles/lib__libc__picolibc.dir/libc-hooks.c.obj
+    provide thunks for fputc, stdout & stdin hooks
+
+./zephyr/lib/libc/common/CMakeFiles/lib__libc__common.dir/source/stdlib/abort.c.obj
+    printk abort & k_panic()
+./zephyr/lib/libc/common/CMakeFiles/lib__libc__common.dir/source/stdlib/malloc.c.obj
+    #if nightmare normally ending in one of
+    * static malloc_arena
+    * linker defined area
+    Provides malloc and aligned_alloc that call sys_heap_alligned_alloc w/ locking
+
+
+## ARM64 drivers
+./zephyr/drivers/interrupt_controller/CMakeFiles/drivers__interrupt_controller.dir/intc_gicv3.c.obj
+./zephyr/drivers/timer/CMakeFiles/drivers__timer.dir/arm_arch_timer.c.obj
+
+./zephyr/drivers/timer/CMakeFiles/drivers__timer.dir/sys_clock_init.c.obj
+no-op functions
+
+
+# Common kernel
+./zephyr/kernel/CMakeFiles/kernel.dir/sem.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/idle.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/version.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/banner.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/timer.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/condvar.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/kheap.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/timeout.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/mmu.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/mailbox.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/system_work_q.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/fatal.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/msg_q.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/mempool.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/sched.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/queue.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/mutex.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/work.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/busy_wait.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/stack.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/device.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/init.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/mem_slab.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/errno.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/dynamic_disabled.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/main_weak.c.obj
+./zephyr/kernel/CMakeFiles/kernel.dir/thread.c.obj
+
+
+## Link support & Info
+./zephyr/CMakeFiles/offsets.dir/arch/arm64/core/offsets/offsets.c.obj
+./zephyr/CMakeFiles/zephyr_pre0.dir/misc/empty_file.c.obj
+./zephyr/CMakeFiles/zephyr_final.dir/isr_tables.c.obj
+./zephyr/CMakeFiles/zephyr_final.dir/misc/empty_file.c.obj
+./CMakeFiles/3.22.1/CompilerIdC/CMakeCCompilerId.o
+./CMakeFiles/3.22.1/CompilerIdCXX/CMakeCXXCompilerId.o
+
+## XEN "SOC"
+./zephyr/CMakeFiles/zephyr.dir/soc/arm64/xenvm/mmu_regions.c.obj
+
+
+## Logging and Tracing
+./zephyr/CMakeFiles/zephyr.dir/subsys/tracing/tracing_none.c.obj
+./zephyr/CMakeFiles/zephyr.dir/subsys/logging/log_core.c.obj
+./zephyr/CMakeFiles/zephyr.dir/subsys/logging/log_msg.c.obj
+./zephyr/CMakeFiles/zephyr.dir/subsys/logging/log_cache.c.obj
+./zephyr/CMakeFiles/zephyr.dir/misc/generated/configs.c.obj
+./zephyr/CMakeFiles/zephyr.dir/subsys/logging/log_mgmt.c.obj
+
+## Library
+./zephyr/CMakeFiles/zephyr.dir/lib/utils/dec.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/utils/hex.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/utils/bitarray.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/utils/rb.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/utils/timeutil.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/heap/heap.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/os/sem.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/os/assert.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/os/printk.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/os/cbprintf_complete.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/os/cbprintf_packaged.c.obj
+./zephyr/CMakeFiles/zephyr.dir/lib/os/thread_entry.c.obj
+
+## Xen drivers
+./zephyr/CMakeFiles/zephyr.dir/drivers/xen/hvm.c.obj
+./zephyr/CMakeFiles/zephyr.dir/drivers/xen/memory.c.obj
+./zephyr/CMakeFiles/zephyr.dir/drivers/xen/events.c.obj
+
+## Application
+./CMakeFiles/app.dir/src/main.c.obj
