@@ -20,8 +20,8 @@ NUM_DOMUS=2
 
 DOMU_KERNEL[0]="dom1/vmlinuz"
 DOMU_RAMDISK[0]="dom1/initrd.cpio"
-DOMU_CMD[0]="console=hvc0 earlycon=xen"
-DOMU_MEM[0]=512
+DOMU_CMD[0]="console=/dev/ttyAMA0 earlycon=xen"
+DOMU_MEM[0]=1024
 DOMU_VCPUS[0]=1
 
 DOMU_KERNEL[1]="dom2/zephyr.bin"
