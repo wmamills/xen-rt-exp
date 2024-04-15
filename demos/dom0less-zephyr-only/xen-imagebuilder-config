@@ -9,12 +9,13 @@ BOOT_CMD="booti"
 
 DEVICE_TREE="virt.dtb"
 XEN="xen"
-XEN_CMD="dom0_mem=1G,max:1G dom0_max_vcpus=1 dom0_vcpus_pin=true bootscrub=0 sched=null loglvl=all guest_loglvl=all console_to_ring=true"
+XEN_CMD="bootscrub=0 sched=null loglvl=all guest_loglvl=all"
 
-DOM0_KERNEL="dom0/zephyr.bin"
-DOM0_CMD="ignored"
+NUM_DOMUS=1
 
-NUM_DOMUS=0
+DOMU_KERNEL[0]="dom0/zephyr.bin"
+DOMU_MEM[0]="16"
+DOMU_CMD[0]="ignored"
 
 UBOOT_SOURCE="boot.script"
 UBOOT_SCRIPT="boot.scr.uimg"
