@@ -82,7 +82,7 @@ QEMU_BASE="-machine type=virt \
            -monitor tcp::2220,server=on,wait=off \
            -gdb tcp::2221,server=on,wait=off \
            -pidfile $PID_FILE \
-           -m 8192 \
+           -m 4096 \
            -nographic \
            ${QEMU_EXTRA_ARGS}
            "
@@ -216,7 +216,7 @@ case $1 in
 
 "xen-direct"|"xen")
     : ${KERNEL_CMDLINE:=console=hvc0 earlyprintk=xen root=/dev/vda2}
-    : ${XEN_CMDLINE:=dom0_mem=4G,max:4G dom0_max_vcpus=4 dom0_vcpus_pin=true sched=null loglvl=all guest_loglvl=all}
+    : ${XEN_CMDLINE:=dom0_mem=1792M,max:1792M dom0_max_vcpus=4 dom0_vcpus_pin=true sched=null loglvl=all guest_loglvl=all}
     fetch-qemu
     $FETCH ${HD}.bz2
     $FETCH ${DB}.tar.gz
