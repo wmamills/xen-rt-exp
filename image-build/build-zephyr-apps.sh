@@ -40,7 +40,7 @@ declare -A mode_suffix
 board_name["gicv2"]="xenvm"
 board_name["gicv3"]="xenvm_gicv3"
 config_opts["xl"]="-DCONFIG_XEN_DOM0LESS=n"
-config_opts["dom0less"]="-DCONFIG_XEN_DOM0LESS=y"
+config_opts["dom0less"]="-DCONFIG_XEN_DOM0LESS=y -DDTC_OVERLAY_FILE=dom0less.overlay"
 mode_suffix["xl"]=""
 mode_suffix["dom0less"]="-dom0less"
 
