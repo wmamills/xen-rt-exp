@@ -22,11 +22,14 @@
 
 #set -x
 
-ME=$(readlink -f $0)
-MY_NAME=$(basename $ME)
-MY_DIR=$(dirname $ME)
+ME_ABS=$(readlink -f $0)
+MY_NAME=$(basename $0)
+MY_DIR=$(dirname $ME_ABS)
+ME=$MY_DIR/$MY_NAME
 export BASE_DIR=$(dirname $MY_DIR)
 export IMAGES=$BASE_DIR/images
+
+MODE=${MY_NAME#qemu-}
 
 LOGS=$BASE_DIR/logs
 mkdir -p $LOGS
@@ -55,7 +58,7 @@ FILTER_TOTALS=true
 QEMU_SSH_NAME=qemu
 QEMU_BOOT_SCRIPT="scripts/qemu-run"
 QEMU_BOOT_ARG="xen"
-SESSION_NAME=test-qemu
+SESSION_NAME=$MY_NAME
 
 SSH=local_ssh
 SCP=local_scp
@@ -322,17 +325,9 @@ sync_files() {
     done
 }
 
-# perform a test on the target in a deferred way
-# the test itself will be a separate file
-#
-# we use deferred tests for anything that may cause the target
-# (or the emulator) to hang
-#
-# returns 0 for test completed with 0 exit status
-# returns !0 for anything else
-# always sets global var CAUSE
-do_one_deferred_test() {
-    echo "test $1"
+# For the given test,
+# Transfer the needed files to the target
+prep_one_deferred_test() {
     if [ ! -x $1-test.sh ]; then
         echo "$1-test.sh does not exist or is not -x"
         CAUSE="NOFILE"
@@ -347,8 +342,22 @@ do_one_deferred_test() {
             return 1
         fi
     fi
-    rm -rf $LOGS/test-result.*
     $SCP -q $PWD/$1-test.sh $QEMU_SSH_NAME:
+}
+
+# perform a test on the target in a deferred way
+# the test itself will be a separate file
+#
+# we use deferred tests for anything that may cause the target
+# (or the emulator) to hang
+#
+# returns 0 for test completed with 0 exit status
+# returns !0 for anything else
+# always sets global var CAUSE
+do_one_deferred_test() {
+    echo "test $1"
+    prep_one_deferred_test $1
+    rm -rf $LOGS/test-result.*
     remote_action defer_start defer_test_run "$@"
     check_ssh $TEST_WAIT $SSH_FAIL_COUNT
 }
@@ -443,7 +452,7 @@ clean_tmp() {
     fi
 }
 
-do_host() {
+do_host_test() {
     tmux_panel_title "host side" "$@"
     init_totals
     echo "# LOG=$LOG"
@@ -511,10 +520,36 @@ do_host() {
     tmux kill-win
 }
 
+do_host_demo() {
+    tmux_panel_title "host side" "$@"
+    echo "Starting qemu"
+    tmux split-window -h "$ME subcmd qemu"
+    if ! wait_for_ssh $BOOT_WAIT; then
+        echo "Could not establish ssh, giving up"
+        echo "I did not ensure the needed files are present on the target"
+    else
+        for t in "${TESTS[@]}"; do
+            echo "sync needed files for $t"
+            prep_one_deferred_test $t
+        done
+    fi
+    bash
+    tmux kill-win
+}
+
+qemu_done_test() {
+    true
+}
+
+qemu_done_demo() {
+    tmux kill-win
+}
+
 # This is the tmux window pane function to actually run qemu
 do_qemu() {
     tmux_panel_title "$QEMU_BOOT_SCRIPT" "$QEMU_BOOT_ARG" "$@"
     QEMU_TMUX=no $BASE_DIR/$QEMU_BOOT_SCRIPT $QEMU_BOOT_ARG "$@"
+    qemu_done_$MODE
 }
 
 mk_env() {
@@ -537,6 +572,38 @@ TESTS=( ${TESTS[@]} )
 EOF
 }
 
+start_tmux_test() {
+    touch $LOG
+    echo "Starting..." >$TOTALS
+
+    tmux start-server
+    tmux new-session -d -s QEMU -n $QEMU_WIN_NAME -d "$ME subcmd totals"
+    SESS="QEMU"
+    tmux set -s -t $SESS mouse on
+
+    tmux set -w -t $SESS:$QEMU_WIN_NAME pane-border-status top
+
+    # the host pane is the driver of it all
+    # create it and let it create and destroy the qemu pane
+    tmux split-window -v -l $(( $LINES - 10 )) -t $SESS:$QEMU_WIN_NAME "$ME subcmd host_$MODE"
+
+    tmux attach -t$SESS:$QEMU_WIN_NAME
+}
+
+start_tmux_demo() {
+    touch $LOG
+    echo "Starting..." >$TOTALS
+
+    tmux start-server
+    tmux new-session -d -s QEMU -n $QEMU_WIN_NAME -d "$ME subcmd host_$MODE"
+    SESS="QEMU"
+    tmux set -s -t $SESS mouse on
+
+    tmux set -w -t $SESS:$QEMU_WIN_NAME pane-border-status top
+
+    tmux attach -t$SESS:$QEMU_WIN_NAME
+}
+
 # main starts things up and then waits for tmux to finish or detach
 main() {
     TESTS=( )
@@ -547,8 +614,8 @@ main() {
     fi
 
     if [ -z "$1" -o ! -d $1 ]; then
-        error -e "The first argument to test-qemu should be a directory, like:\n" \
-        "./scripts/test-qemu tests/dummy"
+        error -e "The first argument to $MY_NAME should be a directory, like:\n" \
+        "./scripts/$MY_NAME tests/dummy"
     else
         cd $1; shift
     fi
@@ -591,24 +658,7 @@ main() {
     fi
     export TMPDIR=$MY_TMPDIR/test-qemu-tmp
 
-    touch $LOG
-    echo "Starting..." >$TOTALS
-
-    tmux start-server
-    tmux new-session -d -s QEMU -n $QEMU_WIN_NAME -d "$ME subcmd totals"
-    SESS="QEMU"
-    tmux set -s -t $SESS mouse on
-
-    tmux set -w -t $SESS:$QEMU_WIN_NAME pane-border-status top
-
-    # the host pane is the driver of it all
-    # create it and let it create and destroy the qemu pane
-    tmux split-window -v -l $(( $LINES - 10 )) -t $SESS:$QEMU_WIN_NAME "$ME subcmd host"
-
-    #sleep 1
-    #tmux select-pane -t $SESS:$QEMU_WIN_NAME.1
-
-    tmux attach -t$SESS:$QEMU_WIN_NAME
+    start_tmux_$MODE
 
     # if finished or killed (but not detached)
     if ! tmux has -t$SESS >/dev/null 2>&1; then
@@ -618,17 +668,36 @@ main() {
     fi
 }
 
+do_help_test() {
+    echo "this runs a sequence of tests using qemu"
+    echo "look at test-qemu-vars for examples"
+}
+
+do_help_demo() {
+    echo "This runs a host shell and qemu in two panes of a tmux session"
+    echo "The host shell will wait for qemu to start and then sync any needed files to the target"
+}
+
+
 if [ -n "$TEST_QEMU_VARS" ]; then
     . $TEST_QEMU_VARS
 fi
+
+case $MODE in
+test|demo)
+    true
+    ;;
+*)
+    echo "Unknown mode $MODE"
+    exit 2
+esac
 
 if [ x"$1" = x"subcmd" ]; then
     CMD=$2
     shift; shift;
     do_$CMD "$@"
 elif [ x"$1" = x"help" ]; then
-    echo "this runs a sequence of tests using qemu"
-    echo "look at test-qemu-vars for examples"
+    do_help_$MODE
     exit 2
 else
     main "$@"
