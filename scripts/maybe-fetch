@@ -141,7 +141,7 @@ find_template() {
             ;;
         esac
 
-        echo "Check $S/$TEMPLATE"
+        #echo "Check $S/$TEMPLATE"
         if [ -f $S/$TEMPLATE ]; then
             return 0
         fi
