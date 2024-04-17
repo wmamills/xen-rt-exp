@@ -1,10 +1,10 @@
 RUNS=2
 TRYS=4
 
-BOOT_WAIT=80
+BOOT_WAIT=120
 SHUTDOWN_WAIT=80
 
 TRY_CONTINUE=true
 FILTER_TOTALS=false
 
-TESTS=( linux-domu-x4  )
+TESTS=( linux-domu linux-domu-x4  )
