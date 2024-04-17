@@ -26,24 +26,22 @@ Next clone the repo:
 git clone https://github.com/wmamills/xen-rt-exp.git
 cd xen-rt-exp
 ```
+## Running the Dom0 xl based demos
 
-Now you can run the demo using this command:
+Now you can run the the zephyr-hello demo using this command:
 ```
-./scripts/qemu-run xen
+./scripts/qemu-demo demos/zephyr-hello
 ```
 
 The first time you run it, it will pull the images you need and decompress them.
 It will take some time depending on your internet connection.
 This only happens the first time you use a given qemu model.
 
-QEMU will now be running Xen and a Linux DOM0.
+(On a slow connection you may get a timeout on the host side.
+If so just let qemu finish getting the images and then exit from the host side and run again.
+You will be find thereafter.)
 
-You will need some files on the target.
-From another terminal on the host, use
-```
-./scripts/maybe-fetch zephyr-apps
-./scripts/my-scp demos/zephyr-hello/* images/zephyr-apps/* qemu:
-```
+QEMU will now be running Xen and a Linux DOM0 and the needed files for the demo will have been transfered to the target system (qemu).  You will have a host pane on the right and the target system on the left.
 
 Now on the target systems, log in as root with no password and do these commands:
 ```
@@ -67,32 +65,30 @@ domains at the same time, just change the name for each of the 4.
 
 To do a graceful please destroy all domains except domain-0 and then:
 ```
-shutdown now
+poweroff
 ```
 
 QEMU should exit when the machine powers down.
 
 A non-graceful termination can be done via Ctrl-A X.
-(Control and 'a' key and then capitol letter X).  Keep in mind that this demo
-has a persistent disk image and there is a small chance of disk corruption for
-a non graceful termination.
+(Control and 'a' key and then capitol letter X) in the qemu pane or just exit on the host pane.
+Keep in mind that this demo has a persistent disk image and there is a small chance of
+disk corruption for a non graceful termination.
 
 If the hard disk image is ever messed up, just delete the
 file images/debian-12-arm64/hd.img.  It will be recreated when you need it
 again by decompressing the template file in saved-images.  A new download
 will not be required.
 
-Note:
+The other demos that don't start with dom0less-* can be run in a similar way.  You can look at the *-test.sh files to see what commands you may want to try on the target.
 
-Additional packages are required to run the TRS target but that target is
-not needed for this demo.  The required packages are all available in
-Ubuntu 22.04 but not Ubuntu 20.04.
+## Running the Dom0less demos
 
-Note also that TRS takes a very long time to boot the first time.  It encrypts
-the rootfs to the specific simulated TPM on first boot.  It then reboots.
-
-The additional packages are:
+To run one of the dom0less demos do the following (using the zephyr-only demo as an example):
 ```
-sudo apt install --no-install-recommends qemu-system-arm \
-    qemu-efi-aarch64 swtpm-tools ipxe-qemu
+./demos/dom0less-zephyr-only/do_it
 ```
+
+For the demos that have more that one domain (for example dom0less-linux-hello), use Ctrl-A SIX times to switch the console input to a new focus.  QEMU is eating every other Ctrl-A and Xen needs to see 3 to switch.
+
+To exit these demos you can use Ctrl-A x to quit qemu.  For the demos that do have a dom0 you can also use poweroff from dom0.
