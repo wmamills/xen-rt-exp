@@ -10,7 +10,7 @@ BASE_DIR=$(dirname $MY_DIR)
 mkdir -p $BASE_DIR/logs
 PID_FILE=$BASE_DIR/logs/qemu.pid
 
-DEF_QEMU_DIR=$BASE_DIR/images/host/$(uname -m)/qemu-9-wip
+DEF_QEMU_DIR=$BASE_DIR/images/host/$(uname -m)/qemu-v9
 
 FETCH=$BASE_DIR/scripts/maybe-fetch
 
